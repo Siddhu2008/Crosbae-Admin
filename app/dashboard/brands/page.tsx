@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { inventoryAPI } from "@/lib/api";
+import { inventoryAPI } from "@/lib/services/inventory";
 import type { Brand } from "@/types/brand";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { DashboardHeader } from "@/components/dashboard-header";

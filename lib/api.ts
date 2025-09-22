@@ -1,8 +1,6 @@
-import axios, { type AxiosInstance, type AxiosResponse } from "axios"
+import axios, { type AxiosInstance, type AxiosResponse, type AxiosError } from "axios"
 
-// const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api"
 const API_BASE_URL = "https://api.crosbae.com/api"
-// const API_BASE_URL = "http://localhost:8000/api";
 
 // Create axios instance
 const api: AxiosInstance = axios.create({
@@ -17,6 +15,13 @@ const api: AxiosInstance = axios.create({
 const getToken = (): string | null => {
   if (typeof window !== "undefined") {
     return localStorage.getItem("access_token")
+  }
+  return null
+}
+
+const getRefreshToken = (): string | null => {
+  if (typeof window !== "undefined") {
+    return localStorage.getItem("refresh_token")
   }
   return null
 }
@@ -39,6 +44,9 @@ api.interceptors.request.use(
   (config) => {
     const token = getToken()
     if (token) {
+      if (!config.headers) {
+        config.headers = {}
+      }
       config.headers.Authorization = `Bearer ${token}`
     }
     return config
@@ -51,14 +59,14 @@ api.interceptors.request.use(
 // Response interceptor to handle token refresh
 api.interceptors.response.use(
   (response: AxiosResponse) => response,
-  async (error) => {
+  async (error: AxiosError & { config?: any }) => {
     const originalRequest = error.config
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
       originalRequest._retry = true
 
       try {
-        const refreshToken = localStorage.getItem("refresh_token")
+        const refreshToken = getRefreshToken()
         if (refreshToken) {
           const response = await axios.post(`${API_BASE_URL}/auth/refresh/`, {
             refresh: refreshToken,
@@ -74,7 +82,9 @@ api.interceptors.response.use(
       } catch (refreshError) {
         // Refresh failed, redirect to login
         removeToken()
-        window.location.href = "/login"
+        if (typeof window !== "undefined") {
+          window.location.href = "/login"
+        }
         return Promise.reject(refreshError)
       }
     }
@@ -89,7 +99,9 @@ export const authAPI = {
     const response = await api.post("/auth/login/", { username, password })
     const { access, refresh, user } = response.data
     setToken(access)
-    localStorage.setItem("refresh_token", refresh)
+    if (typeof window !== "undefined") {
+      localStorage.setItem("refresh_token", refresh)
+    }
     return response.data
   },
 
@@ -109,7 +121,7 @@ export const authAPI = {
 
 // Inventory API
 export const inventoryAPI = {
-  getProducts: async (params?: any) => {
+  getProducts: async (params?: Record<string, any>) => {
     const response = await api.get("/inventory/products/", { params })
     return response.data
   },
@@ -145,7 +157,7 @@ export const inventoryAPI = {
     return response.data
   },
 
-  exportProducts: async (params?: any) => {
+  exportProducts: async (params?: Record<string, any>) => {
     const response = await api.get("/inventory/products/export/", {
       params,
       responseType: "blob",
@@ -168,8 +180,13 @@ export const inventoryAPI = {
     return response.data
   },
 
-  createBrand: async (data: { name: string; description?: string }) => {
+  createBrand: async (data: FormData) => {
     const response = await api.post("/inventory/brands/", data)
+    return response.data
+  },
+
+  updateBrand: async (id: number, data: FormData) => {
+    const response = await api.put(`/inventory/brands/${id}/`, data)
     return response.data
   },
 
@@ -205,8 +222,8 @@ export const inventoryAPI = {
 
   uploadProductImages: async (productId: number, files: File[]) => {
     const formData = new FormData()
-    files.forEach((file, index) => {
-      formData.append(`images`, file)
+    files.forEach((file) => {
+      formData.append("images", file)
     })
     const response = await api.post(`/inventory/products/${productId}/upload-images/`, formData, {
       headers: {
@@ -219,7 +236,7 @@ export const inventoryAPI = {
 
 // Orders API
 export const ordersAPI = {
-  getOrders: async (params?: any) => {
+  getOrders: async (params?: Record<string, any>) => {
     const response = await api.get("/orders/", { params })
     return response.data
   },
@@ -237,7 +254,7 @@ export const ordersAPI = {
 
 // Customers API
 export const customersAPI = {
-  getCustomers: async (params?: any) => {
+  getCustomers: async (params?: Record<string, any>) => {
     const response = await api.get("/customers/", { params })
     return response.data
   },
@@ -250,19 +267,19 @@ export const customersAPI = {
 
 // Payments API
 export const paymentsAPI = {
-  getPayments: async (params?: any) => {
+  getPayments: async (params?: Record<string, any>) => {
     const response = await api.get("/payments/", { params })
     return response.data
   },
 
-  exportPayments: async (params?: any) => {
+  exportPayments: async (params?: Record<string, any>) => {
     const response = await api.get("/payments/export/", {
       params,
       responseType: "blob",
     })
 
     // Create download link
-    const url = window.URL.createObjectURL(new Blob([response]))
+    const url = window.URL.createObjectURL(response.data)
     const link = document.createElement("a")
     link.href = url
     link.setAttribute("download", `payments-${new Date().toISOString().split("T")[0]}.csv`)
@@ -271,17 +288,11 @@ export const paymentsAPI = {
     link.remove()
     window.URL.revokeObjectURL(url)
 
-    return response
+    return response.data
   },
 
-  // Add payment integration guidance
+  // Razorpay placeholder
   processRazorpayPayment: async (paymentData: any) => {
-    // TODO: Replace with actual Razorpay integration
-    // 1. Initialize Razorpay with your API key
-    // 2. Create order on backend: POST /payments/razorpay/create-order/
-    // 3. Open Razorpay checkout with order details
-    // 4. Handle success/failure callbacks
-    // 5. Verify payment on backend: POST /payments/razorpay/verify/
     console.log("Razorpay integration needed - replace this with actual implementation")
     throw new Error("Razorpay integration not implemented")
   },
@@ -289,7 +300,7 @@ export const paymentsAPI = {
 
 // Shipping API
 export const shippingAPI = {
-  getShipments: async (params?: any) => {
+  getShipments: async (params?: Record<string, any>) => {
     const response = await api.get("/shipping/", { params })
     return response.data
   },
@@ -304,24 +315,13 @@ export const shippingAPI = {
     return response.data
   },
 
-  // Add shipping integration guidance
+  // Courier integration placeholder
   createShipmentWithCourier: async (shipmentData: any) => {
-    // TODO: Replace with actual courier integration (Delhivery, Blue Dart, etc.)
-    // 1. Validate shipment data
-    // 2. Call courier API to create shipment
-    // 3. Get AWB number and tracking details
-    // 4. Save shipment details to database
-    // 5. Send tracking info to customer
     console.log("Courier integration needed - replace this with actual implementation")
     throw new Error("Courier integration not implemented")
   },
 
   trackShipment: async (awbNumber: string) => {
-    // TODO: Replace with actual tracking API integration
-    // 1. Call courier tracking API with AWB number
-    // 2. Parse tracking response
-    // 3. Update shipment status in database
-    // 4. Return formatted tracking data
     console.log("Tracking integration needed - replace this with actual implementation")
     throw new Error("Tracking integration not implemented")
   },
@@ -329,7 +329,7 @@ export const shippingAPI = {
 
 // Reviews and Testimonials API
 export const reviewsAPI = {
-  getReviews: async (params?: any) => {
+  getReviews: async (params?: Record<string, any>) => {
     const response = await api.get("/reviews/", { params })
     return response.data
   },
@@ -344,7 +344,7 @@ export const reviewsAPI = {
     return response.data
   },
 
-  getTestimonials: async (params?: any) => {
+  getTestimonials: async (params?: Record<string, any>) => {
     const response = await api.get("/testimonials/", { params })
     return response.data
   },
@@ -380,7 +380,7 @@ export const mediaAPI = {
     return response.data
   },
 
-  getFiles: async (params?: any) => {
+  getFiles: async (params?: Record<string, any>) => {
     const response = await api.get("/media/", { params })
     return response.data
   },
@@ -419,7 +419,7 @@ export const dashboardAPI = {
 
 // Coupons API
 export const couponsAPI = {
-  getCoupons: async (params?: any) => {
+  getCoupons: async (params?: Record<string, any>) => {
     const response = await api.get("/coupons/", { params })
     return response.data
   },
