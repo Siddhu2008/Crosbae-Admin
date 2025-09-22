@@ -21,8 +21,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { Trash2, Edit, Plus } from "lucide-react";
 import {
@@ -37,7 +35,7 @@ export default function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // form state
+  // Form state
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Category | null>(null);
   const [name, setName] = useState("");
@@ -57,7 +55,7 @@ export default function CategoriesPage() {
       const data = await inventoryAPI.getCategories();
       setCategories(data.results ?? data);
     } catch (err) {
-      console.error("Failed load categories", err);
+      console.error("Failed to load categories", err);
       toast({
         title: "Error",
         description: "Failed to load categories",
@@ -138,10 +136,9 @@ export default function CategoriesPage() {
           title="Categories"
           description="Manage product categories"
         />
-        <div className="p-4 md:p-6"> {/* Responsive padding */}
+        <div className="p-4 md:p-6">
           <Card>
             <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
-              {/* Mobile stacks title and button */}
               <div>
                 <CardTitle>Categories</CardTitle>
                 <CardDescription>
@@ -159,7 +156,7 @@ export default function CategoriesPage() {
                 <div className="text-center py-12">Loading...</div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[600px] table-auto"> {/* min-width ensures horizontal scroll on small */}
+                  <table className="w-full min-w-[600px] table-auto">
                     <thead>
                       <tr className="text-left border-b">
                         <th className="py-2 px-2 md:px-4">Name</th>
@@ -173,7 +170,11 @@ export default function CategoriesPage() {
                       {categories.map((c) => (
                         <tr key={c.id} className="border-b">
                           <td className="py-3 px-2 md:px-4">{c.name}</td>
-                          <td className="py-3 px-2 md:px-4">{c.parent ?? "-"}</td>
+                          <td className="py-3 px-2 md:px-4">
+                            {c.parent
+                              ? categories.find((p) => p.id === c.parent)?.name ?? "-"
+                              : "-"}
+                          </td>
                           <td className="py-3 px-2 md:px-4">
                             {c.image_url ? (
                               <img
@@ -218,7 +219,7 @@ export default function CategoriesPage() {
 
         {/* Modal Form */}
         <Dialog open={showForm} onOpenChange={setShowForm}>
-          <DialogContent className="max-w-sm sm:max-w-md"> {/* narrower max width for mobile */}
+          <DialogContent className="max-w-sm sm:max-w-md">
             <DialogHeader>
               <DialogTitle>
                 {editing ? "Edit Category" : "Add Category"}
@@ -237,35 +238,32 @@ export default function CategoriesPage() {
                 />
               </div>
 
-              {/* Parent (ID) */}
+              {/* Parent Category */}
               <div>
-                <Label htmlFor="parent">Parent (ID)</Label>
+                <Label htmlFor="parent">Parent Category</Label>
                 <Select
                   value={parent === "" ? "none" : String(parent)}
-                  onValueChange={(value) => {
-                    setParent(value === "none" ? "" : Number(value));
-                  }}
+                  onValueChange={(value) =>
+                    setParent(value === "none" ? "" : Number(value))
+                  }
                 >
                   <SelectTrigger id="parent" className="w-full">
                     <SelectValue placeholder="Select parent (optional)" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">None</SelectItem>
-                    {categories.map((cat) =>
-                      editing?.id !== cat.id ? (
+                    {categories
+                      .filter((cat) => editing?.id !== cat.id)
+                      .map((cat) => (
                         <SelectItem key={cat.id} value={String(cat.id)}>
-                          {cat.id}
+                          {cat.name}
                         </SelectItem>
-                      ) : null
-                    )}
+                      ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-muted-foreground my-2">
-                  Select a parent category by ID (optional).
-                </p>
               </div>
 
-              {/* Image */}
+              {/* Image Upload */}
               <div>
                 <Label htmlFor="image">Image (optional)</Label>
                 <Input
