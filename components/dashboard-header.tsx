@@ -1,6 +1,7 @@
 "use client"
 
 import { Bell } from "lucide-react"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 
@@ -20,16 +21,19 @@ export function DashboardHeader({ title, description }: DashboardHeaderProps) {
         </div>
 
         {/* Actions */}
-        <div className="flex items-center space-x-4">
-          <Button variant="ghost" size="sm" className="relative">
-            <Bell className="w-5 h-5" />
-            <Badge
-              variant="destructive"
-              className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center text-xs"
-            >
-              3
-            </Badge>
-          </Button>
+        {/* Notification icon only on desktop */}
+        <div className="hidden sm:flex items-center space-x-4">
+          <Link href="/dashboard/notifications">
+            <Button variant="ghost" size="sm" className="relative">
+              <Bell className="w-5 h-5" />
+              <Badge
+                variant="destructive"
+                className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center text-xs"
+              >
+                3
+              </Badge>
+            </Button>
+          </Link>
         </div>
       </div>
     </div>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { DashboardHeader } from "@/components/dashboard-header"
 import { Button } from "@/components/ui/button"
@@ -22,52 +22,40 @@ interface MediaFile {
 }
 
 export default function MediaPage() {
-  const [files, setFiles] = useState<MediaFile[]>([
-    {
-      id: "1",
-      name: "hero-banner.jpg",
-      url: "/jewelry-banner.jpg",
-      size: 245760,
-      type: "image/jpeg",
-      uploadedAt: "2024-01-15T10:30:00Z",
-    },
-    {
-      id: "2",
-      name: "product-catalog.pdf",
-      url: "#",
-      size: 1048576,
-      type: "application/pdf",
-      uploadedAt: "2024-01-14T14:20:00Z",
-    },
-    {
-      id: "3",
-      name: "testimonial-bg.png",
-      url: "/testimonial-background.jpg",
-      size: 512000,
-      type: "image/png",
-      uploadedAt: "2024-01-13T09:15:00Z",
-    },
-  ])
+  const [files, setFiles] = useState<MediaFile[]>([])
+  const { toast } = useToast()
+  // Load files from API
+  useEffect(() => {
+    const fetchFiles = async () => {
+      try {
+        // @ts-ignore
+        const data = await import("@/lib/api").then(mod => mod.mediaAPI.getFiles())
+        setFiles(data)
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to load media files",
+          variant: "destructive",
+        })
+      }
+    }
+    fetchFiles()
+  }, [toast])
   const [uploading, setUploading] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
-  const { toast } = useToast()
 
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
       setUploading(true)
       try {
-        await new Promise((resolve) => setTimeout(resolve, 2000))
-
-        const newFiles: MediaFile[] = acceptedFiles.map((file) => ({
-          id: Math.random().toString(36).substr(2, 9),
-          name: file.name,
-          url: URL.createObjectURL(file),
-          size: file.size,
-          type: file.type,
-          uploadedAt: new Date().toISOString(),
-        }))
-
-        setFiles((prev) => [...newFiles, ...prev])
+        // @ts-ignore
+        const { mediaAPI } = await import("@/lib/api")
+        for (const file of acceptedFiles) {
+          await mediaAPI.uploadFile(file)
+        }
+        // Refresh file list
+        const data = await mediaAPI.getFiles()
+        setFiles(data)
         toast({
           title: "Success",
           description: `${acceptedFiles.length} file(s) uploaded successfully`,
@@ -111,10 +99,21 @@ export default function MediaPage() {
   }
 
   const deleteFile = (id: string) => {
-    setFiles((prev) => prev.filter((file) => file.id !== id))
-    toast({
-      title: "Success",
-      description: "File deleted successfully",
+    // @ts-ignore
+    import("@/lib/api").then(({ mediaAPI }) => {
+      mediaAPI.deleteFile(Number(id)).then(() => {
+        setFiles((prev) => prev.filter((file) => file.id !== id))
+        toast({
+          title: "Success",
+          description: "File deleted successfully",
+        })
+      }).catch(() => {
+        toast({
+          title: "Error",
+          description: "Failed to delete file",
+          variant: "destructive",
+        })
+      })
     })
   }
 

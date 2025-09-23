@@ -48,7 +48,7 @@ import {
   Download,
   Filter,
 } from "lucide-react"
-import { inventoryAPI } from "@/lib/api"
+import { productsAPI, categoriesAPI, brandsAPI } from "@/lib/services/inventory";
 import { useToast } from "@/hooks/use-toast"
 
 interface Product {
@@ -99,86 +99,33 @@ export default function InventoryPage() {
 
   const loadProducts = async () => {
     try {
-      const response = await inventoryAPI.getProducts()
-      setProducts(response.results || [])
+      const response = await productsAPI.getProducts();
+      setProducts(response.results || response);
     } catch (error) {
-      console.error("Failed to load products:", error)
+      console.error("Failed to load products:", error);
       toast({
         title: "Error",
         description: "Failed to load products. Please try again.",
         variant: "destructive",
-      })
-      // Mock data for demo
-      setProducts([
-        {
-          id: 1,
-          name: "Gold Necklace Set",
-          sku: "GNS001",
-          category: { id: 1, name: "Necklaces" },
-          brand: { id: 1, name: "Tanishq" },
-          price: 45000,
-          quantity: 12,
-          weight: 25.5,
-          stock: 12,
-          status: "active",
-          created_at: "2024-01-15T10:30:00Z",
-        },
-        {
-          id: 2,
-          name: "Diamond Earrings",
-          sku: "DE002",
-          category: { id: 2, name: "Earrings" },
-          brand: { id: 2, name: "Kalyan Jewellers" },
-          price: 32000,
-          quantity: 5,
-          weight: 8.2,
-          stock: 5,
-          status: "active",
-          created_at: "2024-01-14T14:20:00Z",
-        },
-        {
-          id: 3,
-          name: "Silver Bracelet",
-          sku: "SB003",
-          category: { id: 4, name: "Bracelets" },
-          price: 2500,
-          quantity: 0,
-          weight: 15.0,
-          stock: 0,
-          status: "out_of_stock",
-          created_at: "2024-01-13T09:15:00Z",
-        },
-        {
-          id: 4,
-          name: "Pearl Ring",
-          sku: "PR004",
-          category: { id: 3, name: "Rings" },
-          brand: { id: 3, name: "Malabar Gold" },
-          price: 18000,
-          quantity: 8,
-          weight: 5.8,
-          stock: 8,
-          status: "active",
-          created_at: "2024-01-12T16:45:00Z",
-        },
-      ])
+      });
+      setProducts([]);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  }  
 
   const loadFilterData = async () => {
     try {
       const [categoriesData, brandsData] = await Promise.all([
-        inventoryAPI.getCategories().catch(() => ({ results: [] })),
-        inventoryAPI.getBrands().catch(() => ({ results: [] })),
-      ])
-      setCategories(categoriesData.results || [])
-      setBrands(brandsData.results || [])
+        categoriesAPI.getCategories().catch(() => ({ results: [] })),
+        brandsAPI.getBrands().catch(() => ({ results: [] })),
+      ]);
+      setCategories(categoriesData.results || categoriesData);
+      setBrands(brandsData.results || brandsData);
     } catch (error) {
-      console.error("Failed to load filter data:", error)
+      console.error("Failed to load filter data:", error);
     }
-  }
+  }  
 
   const applyFilters = () => {
     let filtered = [...products]
@@ -238,64 +185,62 @@ export default function InventoryPage() {
 
   const handleCreateProduct = async (data: any) => {
     try {
-      await inventoryAPI.createProduct(data)
+      await productsAPI.createProduct(data);
       toast({
         title: "Success",
         description: "Product created successfully",
-      })
-      setShowForm(false)
-      loadProducts()
+      });
+      setShowForm(false);
+      loadProducts();
     } catch (error: any) {
-      console.error("Create product error:", error)
+      console.error("Create product error:", error);
       toast({
         title: "Error",
         description: error.response?.data?.detail || "Failed to create product",
         variant: "destructive",
-      })
+      });
     }
-  }
+  }  
 
   const handleUpdateProduct = async (data: any) => {
-    if (!editingProduct) return
-
+    if (!editingProduct) return;
     try {
-      await inventoryAPI.updateProduct(editingProduct.id, data)
+      await productsAPI.updateProduct(editingProduct.id, data);
       toast({
         title: "Success",
         description: "Product updated successfully",
-      })
-      setEditingProduct(null)
-      setShowForm(false)
-      loadProducts()
+      });
+      setEditingProduct(null);
+      setShowForm(false);
+      loadProducts();
     } catch (error: any) {
-      console.error("Update product error:", error)
+      console.error("Update product error:", error);
       toast({
         title: "Error",
         description: error.response?.data?.detail || "Failed to update product",
         variant: "destructive",
-      })
+      });
     }
-  }
+  }  
 
   const handleDeleteProduct = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this product?")) return
-
+    if (!confirm("Are you sure you want to delete this product?")) return;
     try {
-      await inventoryAPI.deleteProduct(id)
+      await productsAPI.deleteProduct(id);
       toast({
         title: "Success",
         description: "Product deleted successfully",
-      })
-      loadProducts()
+      });
+      loadProducts();
     } catch (error: any) {
-      console.error("Delete product error:", error)
+      console.error("Delete product error:", error);
       toast({
         title: "Error",
         description: error.response?.data?.detail || "Failed to delete product",
         variant: "destructive",
-      })
+      });
     }
-  }
+  }  
 
   const handleBulkUpload = async () => {
     if (!bulkFile) return

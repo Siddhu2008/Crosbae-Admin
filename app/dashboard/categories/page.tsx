@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { inventoryAPI } from "@/lib/services/inventory";
+import { categoriesAPI } from "@/lib/services/inventory";
 import type { Category } from "@/types/category";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { DashboardHeader } from "@/components/dashboard-header";
@@ -52,7 +52,7 @@ export default function CategoriesPage() {
   const loadCategories = async () => {
     setLoading(true);
     try {
-      const data = await inventoryAPI.getCategories();
+      const data = await categoriesAPI.getCategories();
       setCategories(data.results ?? data);
     } catch (err) {
       console.error("Failed to load categories", err);
@@ -92,10 +92,10 @@ export default function CategoriesPage() {
       if (imageFile) fd.append("image_file", imageFile);
 
       if (editing) {
-        await inventoryAPI.updateCategory(editing.slug, fd);
+        await categoriesAPI.updateCategory(editing.slug, fd);
         toast({ title: "Updated", description: "Category updated" });
       } else {
-        await inventoryAPI.createCategory(fd);
+        await categoriesAPI.createCategory(fd);
         toast({ title: "Created", description: "Category created" });
       }
 
@@ -116,7 +116,7 @@ export default function CategoriesPage() {
   const handleDelete = async (slug: string) => {
     if (!confirm("Delete this category?")) return;
     try {
-      await inventoryAPI.deleteCategory(slug);
+      await categoriesAPI.deleteCategory(slug);
       toast({ title: "Deleted", description: "Category deleted" });
       loadCategories();
     } catch (err: any) {

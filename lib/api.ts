@@ -1,3 +1,4 @@
+
 import axios, { type AxiosInstance, type AxiosResponse, type AxiosError } from "axios"
 
 const API_BASE_URL = "https://api.crosbae.com/api"
@@ -413,6 +414,25 @@ export const dashboardAPI = {
 
   getTopProducts: async () => {
     const response = await api.get("/dashboard/top-products/")
+    return response.data
+  },
+}
+
+
+// Notifications API
+export const notificationsAPI = {
+  getNotifications: async () => {
+    const response = await api.get("/notifications/")
+    return response.data
+  },
+
+  createNotification: async (data: { title: string; message: string; type: string }) => {
+    const response = await api.post("/notifications/", data)
+    return response.data
+  },
+
+  deleteNotification: async (id: number) => {
+    const response = await api.delete(`/notifications/${id}/`)
     return response.data
   },
 }

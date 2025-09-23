@@ -59,58 +59,30 @@ export default function DashboardPage() {
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null)
   const [salesData, setSalesData] = useState<SalesData[]>([])
   const [topProducts, setTopProducts] = useState<TopProduct[]>([])
+  const [recentActivity, setRecentActivity] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    const loadDashboardData = async () => {
+      try {
+        const [metricsData, salesChartData, topProductsData, recentActivityData] = await Promise.all([
+          dashboardAPI.getMetrics(),
+          dashboardAPI.getSalesChart("30d"),
+          dashboardAPI.getTopProducts(),
+          dashboardAPI.getRecentActivity ? dashboardAPI.getRecentActivity() : Promise.resolve([]),
+        ])
+        setMetrics(metricsData)
+        setSalesData(salesChartData)
+        setTopProducts(topProductsData)
+        setRecentActivity(recentActivityData)
+      } catch (error) {
+        console.error("Failed to load dashboard data:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
     loadDashboardData()
   }, [])
-
-  const loadDashboardData = async () => {
-    try {
-      const [metricsData, salesChartData, topProductsData] = await Promise.all([
-        dashboardAPI.getMetrics(),
-        dashboardAPI.getSalesChart("30d"),
-        dashboardAPI.getTopProducts(),
-      ])
-
-      setMetrics(metricsData)
-      setSalesData(salesChartData)
-      setTopProducts(topProductsData)
-    } catch (error) {
-      console.error("Failed to load dashboard data:", error)
-      // Mock fallback data
-      setMetrics({
-        totalRevenue: 125430,
-        totalOrders: 1247,
-        activeCustomers: 892,
-        totalProducts: 156,
-        revenueChange: "+12.5% from last month",
-        ordersChange: "+8.2% from last month",
-        customersChange: "+15.3% from last month",
-        productsChange: "+3 new products",
-      })
-
-      setSalesData([
-        { date: "2024-01-01", sales: 12000, orders: 45 },
-        { date: "2024-01-02", sales: 15000, orders: 52 },
-        { date: "2024-01-03", sales: 18000, orders: 61 },
-        { date: "2024-01-04", sales: 14000, orders: 48 },
-        { date: "2024-01-05", sales: 22000, orders: 73 },
-        { date: "2024-01-06", sales: 19000, orders: 65 },
-        { date: "2024-01-07", sales: 25000, orders: 82 },
-      ])
-
-      setTopProducts([
-        { id: 1, name: "Gold Necklace Set", sales: 45, revenue: 67500 },
-        { id: 2, name: "Diamond Earrings", sales: 32, revenue: 48000 },
-        { id: 3, name: "Silver Bracelet", sales: 28, revenue: 14000 },
-        { id: 4, name: "Pearl Ring", sales: 24, revenue: 36000 },
-        { id: 5, name: "Platinum Chain", sales: 19, revenue: 57000 },
-      ])
-    } finally {
-      setLoading(false)
-    }
-  }
 
   if (loading) {
     return (
@@ -261,62 +233,35 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {[
-                  {
-                    type: "order",
-                    message: "New order #1247 received from John Doe",
-                    time: "2 minutes ago",
-                    status: "pending",
-                  },
-                  {
-                    type: "payment",
-                    message: "Payment of $450 confirmed for order #1246",
-                    time: "5 minutes ago",
-                    status: "completed",
-                  },
-                  {
-                    type: "customer",
-                    message: "New customer registration: jane@example.com",
-                    time: "10 minutes ago",
-                    status: "new",
-                  },
-                  {
-                    type: "inventory",
-                    message: "Low stock alert: Gold Necklace Set (5 remaining)",
-                    time: "15 minutes ago",
-                    status: "warning",
-                  },
-                  {
-                    type: "order",
-                    message: "Order #1245 shipped via FedEx",
-                    time: "20 minutes ago",
-                    status: "shipped",
-                  },
-                ].map((activity, index) => (
-                  <div
-                    key={index}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between py-2 border-b border-border last:border-0"
-                  >
-                    <div className="flex-1">
-                      <p className="text-sm">{activity.message}</p>
-                      <p className="text-xs text-muted-foreground">{activity.time}</p>
-                    </div>
-                    <Badge
-                      variant={
-                        activity.status === "completed"
-                          ? "default"
-                          : activity.status === "pending"
-                          ? "secondary"
-                          : activity.status === "warning"
-                          ? "destructive"
-                          : "outline"
-                      }
-                      className="mt-2 sm:mt-0"
+                {recentActivity.length === 0 ? (
+                  <p className="text-muted-foreground text-sm">No recent activity found.</p>
+                ) : (
+                  recentActivity.map((activity: any, index: number) => (
+                    <div
+                      key={index}
+                      className="flex flex-col sm:flex-row sm:items-center justify-between py-2 border-b border-border last:border-0"
                     >
-                      {activity.status}
-                    </Badge>
-                  </div>
-                ))}
+                      <div className="flex-1">
+                        <p className="text-sm">{activity.message}</p>
+                        <p className="text-xs text-muted-foreground">{activity.time}</p>
+                      </div>
+                      <Badge
+                        variant={
+                          activity.status === "completed"
+                            ? "default"
+                            : activity.status === "pending"
+                            ? "secondary"
+                            : activity.status === "warning"
+                            ? "destructive"
+                            : "outline"
+                        }
+                        className="mt-2 sm:mt-0"
+                      >
+                        {activity.status}
+                      </Badge>
+                    </div>
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>

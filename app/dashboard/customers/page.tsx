@@ -32,7 +32,7 @@ import {
   UserX,
   Calendar,
 } from "lucide-react"
-import { customersAPI } from "@/lib/api"
+import { customersAPI } from "@/lib/services/inventory"
 
 interface Customer {
   id: number
@@ -57,67 +57,10 @@ export default function CustomersPage() {
     setLoading(true)
     try {
       const response = await customersAPI.getCustomers()
-      setCustomers(response.results || [])
+      setCustomers(response.results || response)
     } catch (error) {
       console.error("Failed to load customers:", error)
-      setCustomers([
-        {
-          id: 1,
-          email: "john.doe@example.com",
-          first_name: "John",
-          last_name: "Doe",
-          Picture: null,
-          gender: "male",
-          dob: "1990-05-15",
-          last_login: "2024-01-15T10:30:00Z",
-          created_At: "2023-12-01T09:00:00Z",
-          phone: "+91 9876543210",
-          total_orders: 5,
-          total_spent: 125000,
-        },
-        {
-          id: 2,
-          email: "jane.smith@example.com",
-          first_name: "Jane",
-          last_name: "Smith",
-          Picture: null,
-          gender: "female",
-          dob: "1985-08-22",
-          last_login: "2024-01-14T15:45:00Z",
-          created_At: "2023-11-15T14:30:00Z",
-          phone: "+91 9876543211",
-          total_orders: 3,
-          total_spent: 75000,
-        },
-        {
-          id: 3,
-          email: "bob.wilson@example.com",
-          first_name: "Bob",
-          last_name: "Wilson",
-          Picture: null,
-          gender: "male",
-          dob: "1992-03-10",
-          last_login: "2024-01-13T12:20:00Z",
-          created_At: "2023-10-20T11:15:00Z",
-          phone: "+91 9876543212",
-          total_orders: 2,
-          total_spent: 45000,
-        },
-        {
-          id: 4,
-          email: "alice.brown@example.com",
-          first_name: "Alice",
-          last_name: "Brown",
-          Picture: null,
-          gender: "female",
-          dob: "1988-11-05",
-          last_login: "2023-12-20T08:30:00Z",
-          created_At: "2023-09-10T16:45:00Z",
-          phone: "+91 9876543213",
-          total_orders: 1,
-          total_spent: 18000,
-        },
-      ])
+      setCustomers([])
     } finally {
       setLoading(false)
     }

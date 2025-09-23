@@ -57,22 +57,29 @@ export function AdminSidebar({ className }: AdminSidebarProps) {
     <>
       {/* Mobile Top Navbar */}
       <div className="fixed top-0 left-0 right-0 z-50 bg-sidebar border-b border-sidebar-border px-4 py-3 flex items-center justify-between sm:hidden">
-        {/* Hamburger Menu Button */}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setMobileOpen(!mobileOpen)}
-          className="text-sidebar-foreground hover:bg-sidebar-accent"
-          aria-label={mobileOpen ? "Close menu" : "Open menu"}
-        >
-          {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* Hamburger Menu Button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setMobileOpen(!mobileOpen)}
+            className="text-sidebar-foreground hover:bg-sidebar-accent"
+            aria-label={mobileOpen ? "Close menu" : "Open menu"}
+          >
+            {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </Button>
+        </div>
 
         {/* Title */}
         <div className="text-sidebar-foreground font-bold text-lg select-none">Admin Panel</div>
 
-        {/* Placeholder for spacing */}
-        <div className="w-6 h-6" />
+        {/* Notification Icon */}
+        <Link href="/dashboard/notifications">
+          <Button variant="ghost" size="sm" className="relative text-sidebar-foreground hover:bg-sidebar-accent" aria-label="Notifications">
+            <Bell className="w-6 h-6" />
+            <span className="absolute -top-1 -right-1 bg-destructive text-white rounded-full w-4 h-4 flex items-center justify-center text-xs">3</span>
+          </Button>
+        </Link>
       </div>
 
       {/* Sidebar */}

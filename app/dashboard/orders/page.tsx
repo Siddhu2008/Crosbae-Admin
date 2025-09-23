@@ -37,7 +37,7 @@ import {
   Clock,
   Filter,
 } from "lucide-react"
-import { ordersAPI } from "@/lib/api"
+import { ordersAPI } from "@/lib/services/inventory";
 import { useToast } from "@/hooks/use-toast"
 
 interface Order {
@@ -69,110 +69,33 @@ export default function OrdersPage() {
 
   const loadOrders = async () => {
     try {
-      const params = statusFilter !== "all" ? { status: statusFilter } : {}
-      const response = await ordersAPI.getOrders(params)
-      setOrders(response.results || [])
+      const params = statusFilter !== "all" ? { status: statusFilter } : {};
+      const response = await ordersAPI.getOrders(params);
+      setOrders(response.results || response);
     } catch (error) {
-      console.error("Failed to load orders:", error)
-      // Mock data for demo
-      setOrders([
-        {
-          uuid: "550e8400-e29b-41d4-a716-446655440001",
-          customer: {
-            id: 1,
-            email: "john.doe@example.com",
-            first_name: "John",
-            last_name: "Doe",
-          },
-          status: "processing",
-          order_on: "2024-01-15T10:30:00Z",
-          last_update: "2024-01-15T14:20:00Z",
-          total: 47500,
-          shipping_charge: 500,
-          items_count: 2,
-        },
-        {
-          uuid: "550e8400-e29b-41d4-a716-446655440002",
-          customer: {
-            id: 2,
-            email: "jane.smith@example.com",
-            first_name: "Jane",
-            last_name: "Smith",
-          },
-          status: "shipped",
-          order_on: "2024-01-14T09:15:00Z",
-          last_update: "2024-01-15T11:30:00Z",
-          total: 32000,
-          shipping_charge: 300,
-          items_count: 1,
-        },
-        {
-          uuid: "550e8400-e29b-41d4-a716-446655440003",
-          customer: {
-            id: 3,
-            email: "bob.wilson@example.com",
-            first_name: "Bob",
-            last_name: "Wilson",
-          },
-          status: "delivered",
-          order_on: "2024-01-13T16:45:00Z",
-          last_update: "2024-01-14T10:20:00Z",
-          total: 18000,
-          shipping_charge: 200,
-          items_count: 1,
-        },
-        {
-          uuid: "550e8400-e29b-41d4-a716-446655440004",
-          customer: {
-            id: 4,
-            email: "alice.brown@example.com",
-            first_name: "Alice",
-            last_name: "Brown",
-          },
-          status: "pending",
-          order_on: "2024-01-15T18:20:00Z",
-          last_update: "2024-01-15T18:20:00Z",
-          total: 25000,
-          shipping_charge: 400,
-          items_count: 3,
-        },
-        {
-          uuid: "550e8400-e29b-41d4-a716-446655440005",
-          customer: {
-            id: 5,
-            email: "charlie.davis@example.com",
-            first_name: "Charlie",
-            last_name: "Davis",
-          },
-          status: "cancelled",
-          order_on: "2024-01-12T14:10:00Z",
-          last_update: "2024-01-13T09:30:00Z",
-          total: 15000,
-          shipping_charge: 250,
-          items_count: 1,
-        },
-      ])
+      console.error("Failed to load orders:", error);
+      setOrders([]);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  }  
 
   const handleStatusUpdate = async (orderId: string, newStatus: string) => {
     try {
-      await ordersAPI.updateOrderStatus(orderId, newStatus)
+      await ordersAPI.updateOrderStatus(orderId, newStatus);
       toast({
         title: "Success",
         description: "Order status updated successfully",
-      })
-      loadOrders()
+      });
+      loadOrders();
     } catch (error) {
       toast({
         title: "Error",
         description: "Failed to update order status",
         variant: "destructive",
-      })
+      });
     }
-  }
+  }  
 
   const columns: ColumnDef<Order>[] = [
     {

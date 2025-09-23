@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect  } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
@@ -30,6 +30,18 @@ const couponSchema = z.object({
   is_active: z.boolean(),
 })
 
+export type CouponFormValues = {
+  code: string;
+  description?: string;
+  discount_type: "percentage" | "fixed";
+  discount_value: number;
+  min_order_amount?: number;
+  max_uses?: number;
+  start_date: string; // ISO string
+  end_date: string;   // ISO string
+  is_active: boolean;
+};
+
 type CouponFormData = z.infer<typeof couponSchema>
 
 interface CouponFormProps {
@@ -58,18 +70,14 @@ export function CouponForm({ coupon, onSubmit, onCancel }: CouponFormProps) {
   })
 
   const handleSubmit = async (data: CouponFormData) => {
-    setLoading(true)
-    try {
-      const formattedData = {
-        ...data,
-        start_date: data.start_date.toISOString().split("T")[0],
-        end_date: data.end_date.toISOString().split("T")[0],
-      }
-      await onSubmit(formattedData as any)
-    } finally {
-      setLoading(false)
-    }
+  setLoading(true)
+  try {
+    await onSubmit(data) // no formatting
+  } finally {
+    setLoading(false)
   }
+}
+
 
   const discountType = form.watch("discount_type")
 

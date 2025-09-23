@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { MoreHorizontal, Star, MessageSquare, CheckCircle, XCircle, Plus, Eye } from "lucide-react"
-import { reviewsAPI } from "@/lib/api"
+import { reviewsAPI } from "@/lib/services/inventory"
 import { useToast } from "@/hooks/use-toast"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -75,54 +75,22 @@ export default function ReviewsPage() {
   }, [])
 
   const loadData = async () => {
+    setLoading(true);
     try {
       const [reviewsData, testimonialsData] = await Promise.all([
         reviewsAPI.getReviews().catch(() => ({ results: [] })),
         reviewsAPI.getTestimonials().catch(() => ({ results: [] })),
-      ])
-
-      setReviews(reviewsData.results || [])
-      setTestimonials(testimonialsData.results || [])
+      ]);
+      setReviews(reviewsData.results || []);
+      setTestimonials(testimonialsData.results || []);
     } catch (error) {
-      console.error("Failed to load data:", error)
-      // Mock data for demo
-      setReviews([
-        {
-          id: 1,
-          customer: { name: "Priya Sharma", email: "priya@example.com" },
-          product: { name: "Gold Necklace Set", sku: "GNS001" },
-          rating: 5,
-          comment: "Beautiful necklace! Excellent quality and fast delivery.",
-          is_approved: false,
-          created_at: "2024-01-15T10:30:00Z",
-        },
-        {
-          id: 2,
-          customer: { name: "Rahul Kumar", email: "rahul@example.com" },
-          product: { name: "Diamond Earrings", sku: "DE002" },
-          rating: 4,
-          comment: "Good quality diamonds, but delivery was delayed.",
-          is_approved: true,
-          created_at: "2024-01-14T14:20:00Z",
-        },
-      ])
-
-      setTestimonials([
-        {
-          id: 1,
-          customer_name: "Anita Desai",
-          content:
-            "Amazing jewelry collection! I've been a customer for 3 years and always satisfied with the quality.",
-          rating: 5,
-          product_name: "Gold Collection",
-          is_featured: true,
-          created_at: "2024-01-10T09:00:00Z",
-        },
-      ])
+      console.error("Failed to load data:", error);
+      setReviews([]);
+      setTestimonials([]);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  }  
 
   const handleApproveReview = async (id: number) => {
     try {

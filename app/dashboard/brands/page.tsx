@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { inventoryAPI } from "@/lib/services/inventory";
 import type { Brand } from "@/types/brand";
+import { brandsAPI } from "@/lib/services/inventory";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { DashboardHeader } from "@/components/dashboard-header";
 import { Button } from "@/components/ui/button";
@@ -51,7 +51,7 @@ export default function BrandsPage() {
   const loadBrands = async () => {
     setLoading(true);
     try {
-      const data = await inventoryAPI.getBrands();
+      const data = await brandsAPI.getBrands();
       setBrands(data.results ?? data);
     } catch (err) {
       console.error("Failed to load brands", err);
@@ -94,15 +94,15 @@ export default function BrandsPage() {
       fd.append("name", name);
       fd.append("description", description);
       fd.append("website", website);
-      fd.append("is_active", isActive.toString());
+      fd.append("is_active", isActive ? "true" : "false");
 
       if (logoFile) fd.append("logo", logoFile);
 
       if (editing) {
-        await inventoryAPI.updateBrand(editing.id, fd);
+        await brandsAPI.updateBrand(editing.id, fd);
         toast({ title: "Updated", description: "Brand updated" });
       } else {
-        await inventoryAPI.createBrand(fd);
+        await brandsAPI.createBrand(fd);
         toast({ title: "Created", description: "Brand created" });
       }
 
@@ -124,7 +124,7 @@ export default function BrandsPage() {
     if (!confirm("Delete this brand?")) return;
 
     try {
-      await inventoryAPI.deleteBrand(id);
+      await brandsAPI.deleteBrand(id);
       toast({ title: "Deleted", description: "Brand deleted" });
       loadBrands();
     } catch (err: any) {
@@ -254,6 +254,11 @@ export default function BrandsPage() {
           <DialogContent className="max-w-sm sm:max-w-md">
             <DialogHeader>
               <DialogTitle>{editing ? "Edit Brand" : "Add Brand"}</DialogTitle>
+              <CardDescription>
+                {editing
+                  ? "Update brand details."
+                  : "Fill in details to add a new brand."}
+              </CardDescription>
             </DialogHeader>
 
             <form onSubmit={handleSubmit} className="space-y-4">
