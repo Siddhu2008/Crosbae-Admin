@@ -24,7 +24,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { X, Upload, Plus } from "lucide-react"
-import { inventoryAPI } from "@/lib/api"
+import { categoriesAPI, brandsAPI, metalTypesAPI, stoneTypesAPI, certificationsAPI } from "@/lib/services/inventory"
 
 const productSchema = z.object({
   name: z.string().min(1, "Product name is required"),
@@ -118,11 +118,11 @@ function QuickAddDialog({
 }
 
 export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
-  const [categories, setCategories] = useState([])
-  const [brands, setBrands] = useState([])
-  const [metalTypes, setMetalTypes] = useState([])
-  const [stoneTypes, setStoneTypes] = useState([])
-  const [certifications, setCertifications] = useState([])
+  const [categories, setCategories] = useState<any[]>([])
+  const [brands, setBrands] = useState<any[]>([])
+  const [metalTypes, setMetalTypes] = useState<any[]>([])
+  const [stoneTypes, setStoneTypes] = useState<any[]>([])
+  const [certifications, setCertifications] = useState<any[]>([])
   const [tags, setTags] = useState<string[]>(product?.tags?.split(",") || [])
   const [newTag, setNewTag] = useState("")
   const [images, setImages] = useState<File[]>([])
@@ -157,18 +157,25 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
     setLoadingData(true)
     try {
       const [categoriesData, brandsData, metalTypesData, stoneTypesData, certificationsData] = await Promise.all([
-        inventoryAPI.getCategories().catch(() => ({ results: [] })),
-        inventoryAPI.getBrands().catch(() => ({ results: [] })),
-        inventoryAPI.getMetalTypes().catch(() => ({ results: [] })),
-        inventoryAPI.getStoneTypes().catch(() => ({ results: [] })),
-        inventoryAPI.getCertifications().catch(() => ({ results: [] })),
+        categoriesAPI.getCategories().catch(() => ({ results: [] })),
+        brandsAPI.getBrands().catch(() => ({ results: [] })),
+        metalTypesAPI.getMetalTypes().catch(() => ({ results: [] })),
+  stoneTypesAPI.getStoneTypes().catch(() => ({ results: [] })),
+        certificationsAPI.getCertifications().catch(() => ({ results: [] })),
       ])
 
-      setCategories(categoriesData.results || [])
-      setBrands(brandsData.results || [])
-      setMetalTypes(metalTypesData.results || [])
-      setStoneTypes(stoneTypesData.results || [])
-      setCertifications(certificationsData.results || [])
+      const normalize = (d: any) => {
+        if (!d) return []
+        if (Array.isArray(d)) return d
+        if (d.results && Array.isArray(d.results)) return d.results
+        return []
+      }
+
+      setCategories(normalize(categoriesData))
+      setBrands(normalize(brandsData))
+      setMetalTypes(normalize(metalTypesData))
+      setStoneTypes(normalize(stoneTypesData))
+      setCertifications(normalize(certificationsData))
     } catch (error) {
       console.error("Failed to load form data:", error)
     } finally {
@@ -212,31 +219,31 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
   }
 
   const addCategory = async (name: string) => {
-    const newCategory = await inventoryAPI.createCategory({ name })
+    const newCategory = await categoriesAPI.createCategory({ name })
     setCategories([...categories, newCategory])
     form.setValue("category", newCategory.id.toString())
   }
 
   const addBrand = async (name: string) => {
-    const newBrand = await inventoryAPI.createBrand({ name })
+    const newBrand = await brandsAPI.createBrand({ name })
     setBrands([...brands, newBrand])
     form.setValue("brand", newBrand.id.toString())
   }
 
   const addMetalType = async (name: string) => {
-    const newMetalType = await inventoryAPI.createMetalType({ name })
+    const newMetalType = await metalTypesAPI.createMetalType({ name })
     setMetalTypes([...metalTypes, newMetalType])
     form.setValue("metalType", newMetalType.id.toString())
   }
 
   const addStoneType = async (name: string) => {
-    const newStoneType = await inventoryAPI.createStoneType({ name })
+    const newStoneType = await stoneTypesAPI.createStoneType({ name })
     setStoneTypes([...stoneTypes, newStoneType])
     form.setValue("stoneType", newStoneType.id.toString())
   }
 
   const addCertification = async (name: string) => {
-    const newCertification = await inventoryAPI.createCertification({ name })
+    const newCertification = await certificationsAPI.createCertification({ name })
     setCertifications([...certifications, newCertification])
     form.setValue("certification", newCertification.id.toString())
   }

@@ -49,6 +49,7 @@ import {
   Filter,
 } from "lucide-react"
 import { productsAPI, categoriesAPI, brandsAPI } from "@/lib/services/inventory";
+import { inventoryAPI } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast"
 
 interface Product {
@@ -354,11 +355,12 @@ export default function InventoryPage() {
           <Badge
             variant={
               status === "active"
-                ? "success"
+                ? "default"
                 : status === "inactive"
                 ? "secondary"
                 : "destructive"
             }
+            className={status === "active" ? "bg-green-100 text-green-800 border-transparent" : undefined}
           >
             {status.charAt(0).toUpperCase() + status.slice(1).replace("_", " ")}
           </Badge>
