@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator"
 import { OrderStatusBadge } from "./order-status-badge"
 import { Package, User, MapPin, CreditCard } from "lucide-react"
-import { ordersAPI } from "@/lib/api"
+import { ordersAPI } from "@/lib/services/orders"
 import { useToast } from "@/hooks/use-toast"
 
 interface OrderDetailsDialogProps {

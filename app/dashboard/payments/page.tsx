@@ -22,7 +22,7 @@ import {
   AlertCircle,
   Filter,
 } from "lucide-react"
-import { paymentsAPI } from "@/lib/services/inventory"
+import { paymentsAPI } from "@/lib/services/payments"
 import { useToast } from "@/hooks/use-toast"
 
 interface Payment {

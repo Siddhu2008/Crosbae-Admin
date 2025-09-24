@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { categoriesAPI } from "@/lib/services/inventory";
+import { categoriesAPI } from "@/lib/services/categories";
 import type { Category } from "@/types/category";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { DashboardHeader } from "@/components/dashboard-header";

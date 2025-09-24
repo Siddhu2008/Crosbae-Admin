@@ -32,7 +32,7 @@ import {
   UserX,
   Calendar,
 } from "lucide-react"
-import { customersAPI } from "@/lib/services/inventory"
+import { customersAPI } from "@/lib/services/customers"
 
 interface Customer {
   id: number

@@ -30,7 +30,7 @@ export default function NotificationPage() {
     const fetchNotifications = async () => {
       try {
         // @ts-ignore
-        const { notificationsAPI } = await import("@/lib/api")
+        const { notificationsAPI } = await import("@/lib/services/notifications")
         const data = await notificationsAPI.getNotifications()
         setNotifications(data)
       } catch (error) {

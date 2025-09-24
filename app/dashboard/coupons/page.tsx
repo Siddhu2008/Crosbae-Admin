@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { inventoryAPI } from "@/lib/services/inventory";
-import { couponsAPI } from "@/lib/services/inventory";
+import { couponsAPI } from "@/lib/services/coupons";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { DashboardHeader } from "@/components/dashboard-header";
 import { DataTable } from "@/components/data-table";

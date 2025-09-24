@@ -37,7 +37,7 @@ import {
   Clock,
   Filter,
 } from "lucide-react"
-import { ordersAPI } from "@/lib/services/inventory";
+import { ordersAPI } from "@/lib/services/orders";
 import { useToast } from "@/hooks/use-toast"
 
 interface Order {

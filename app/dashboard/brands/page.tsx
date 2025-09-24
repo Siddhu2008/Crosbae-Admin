@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import type { Brand } from "@/types/brand";
-import { brandsAPI } from "@/lib/services/inventory";
+import { brandsAPI } from "@/lib/services/brands";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { DashboardHeader } from "@/components/dashboard-header";
 import { Button } from "@/components/ui/button";

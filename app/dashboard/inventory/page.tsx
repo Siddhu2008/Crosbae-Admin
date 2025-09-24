@@ -48,8 +48,9 @@ import {
   Download,
   Filter,
 } from "lucide-react"
-import { productsAPI, categoriesAPI, brandsAPI } from "@/lib/services/inventory";
-import { inventoryAPI } from "@/lib/api";
+import {  categoriesAPI } from "@/lib/services/categories";
+import { brandsAPI } from "@/lib/services/brands";
+import { inventoryAPI } from "@/lib/services/inventory";
 import { useToast } from "@/hooks/use-toast"
 
 interface Product {
@@ -100,7 +101,7 @@ export default function InventoryPage() {
 
   const loadProducts = async () => {
     try {
-      const response = await productsAPI.getProducts();
+      const response = await inventoryAPI.getProducts();
       setProducts(response.results || response);
     } catch (error) {
       console.error("Failed to load products:", error);
@@ -186,7 +187,7 @@ export default function InventoryPage() {
 
   const handleCreateProduct = async (data: any) => {
     try {
-      await productsAPI.createProduct(data);
+      await inventoryAPI.createProduct(data);
       toast({
         title: "Success",
         description: "Product created successfully",
@@ -206,7 +207,7 @@ export default function InventoryPage() {
   const handleUpdateProduct = async (data: any) => {
     if (!editingProduct) return;
     try {
-      await productsAPI.updateProduct(editingProduct.id, data);
+      await inventoryAPI.updateProduct(editingProduct.id, data);
       toast({
         title: "Success",
         description: "Product updated successfully",
@@ -227,7 +228,7 @@ export default function InventoryPage() {
   const handleDeleteProduct = async (id: number) => {
     if (!confirm("Are you sure you want to delete this product?")) return;
     try {
-      await productsAPI.deleteProduct(id);
+      await inventoryAPI.deleteProduct(id);
       toast({
         title: "Success",
         description: "Product deleted successfully",

@@ -49,7 +49,7 @@ export default function MediaPage() {
       setUploading(true)
       try {
         // @ts-ignore
-        const { mediaAPI } = await import("@/lib/api")
+        const { mediaAPI } = await import("@/lib/services/media")
         for (const file of acceptedFiles) {
           await mediaAPI.uploadFile(file)
         }
