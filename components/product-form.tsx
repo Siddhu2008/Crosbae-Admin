@@ -535,12 +535,6 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
         inventoryAPI.getCertifications().catch(() => ({ results: [] })),
       ])
 
-      // Debug API responses
-      console.log('categoriesData', categoriesData)
-      console.log('brandsData', brandsData)
-      console.log('metalTypesData', metalTypesData)
-      console.log('stoneTypesData', stoneTypesData)
-      console.log('certificationsData', certificationsData)
 
       // Improved normalization: handle array, results, or direct object
       const normalize = (d: any) => {

@@ -50,13 +50,15 @@ export const categoriesAPI = {
         : (() => {
             const fd = new FormData();
             if (data.name) fd.append("name", data.name);
-            if (data.parent !== undefined)
-              fd.append("parent", String(data.parent));
+            if (data.parent !== undefined) fd.append("parent", String(data.parent));
             if (data.image_file) fd.append("image_file", data.image_file);
             return fd;
           })();
 
-    const response = await api.patch(`/v1/inventory/categories/${slug}/`, formData);
+    const response = await api.patch(
+      `/v1/inventory/categories/${slug}/`,formData,{
+        headers: { "Content-Type": "multipart/form-data" },
+      });
     return response.data;
   },
 
@@ -65,4 +67,3 @@ export const categoriesAPI = {
     return response.data;
   },
 };
-

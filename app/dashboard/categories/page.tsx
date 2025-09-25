@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { categoriesAPI } from "@/lib/services/categories";
 import type { Category } from "@/types/category";
 import { DashboardLayout } from "@/components/dashboard-layout";
@@ -22,7 +22,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, Edit, Plus } from "lucide-react";
+import { Trash2, Edit, Plus, Search, X } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -34,7 +34,7 @@ import {
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-
+  const [searchQuery, setSearchQuery] = useState("");
   // Form state
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Category | null>(null);
@@ -42,13 +42,20 @@ export default function CategoriesPage() {
   const [parent, setParent] = useState<number | "">("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
-
   const { toast } = useToast();
-
+  const filteredCategories = useMemo(() => {
+    if (!searchQuery.trim()) return categories;
+    const query = searchQuery.toLowerCase().trim();
+    return categories.filter(
+      (cat) =>
+        cat.name.toLowerCase().includes(query) ||
+        (cat.slug && cat.slug.toLowerCase().includes(query))
+    );
+  }, [categories, searchQuery]);
+  const clearSearch = () => setSearchQuery("");
   useEffect(() => {
     loadCategories();
   }, []);
-
   const loadCategories = async () => {
     setLoading(true);
     try {
@@ -65,7 +72,6 @@ export default function CategoriesPage() {
       setLoading(false);
     }
   };
-
   const openCreate = () => {
     setEditing(null);
     setName("");
@@ -73,7 +79,6 @@ export default function CategoriesPage() {
     setImageFile(null);
     setShowForm(true);
   };
-
   const openEdit = (c: Category) => {
     setEditing(c);
     setName(c.name);
@@ -81,7 +86,6 @@ export default function CategoriesPage() {
     setImageFile(null);
     setShowForm(true);
   };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -90,7 +94,6 @@ export default function CategoriesPage() {
       fd.append("name", name);
       if (parent !== "") fd.append("parent", String(parent));
       if (imageFile) fd.append("image_file", imageFile);
-
       if (editing) {
         await categoriesAPI.updateCategory(editing.slug, fd);
         toast({ title: "Updated", description: "Category updated" });
@@ -98,7 +101,6 @@ export default function CategoriesPage() {
         await categoriesAPI.createCategory(fd);
         toast({ title: "Created", description: "Category created" });
       }
-
       setShowForm(false);
       loadCategories();
     } catch (err: any) {
@@ -112,7 +114,6 @@ export default function CategoriesPage() {
       setSubmitting(false);
     }
   };
-
   const handleDelete = async (slug: string) => {
     if (!confirm("Delete this category?")) return;
     try {
@@ -128,7 +129,6 @@ export default function CategoriesPage() {
       });
     }
   };
-
   return (
     <DashboardLayout>
       <div className="flex flex-col pt-15 md:pt-0">
@@ -152,8 +152,49 @@ export default function CategoriesPage() {
             </CardHeader>
 
             <CardContent>
+              {/* Search Bar */}
+              <div className="relative w-full md:w-96 mb-4">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Search by name or slug..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 pr-10"
+                />
+                {searchQuery && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearSearch}
+                    className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
               {loading ? (
                 <div className="text-center py-12">Loading...</div>
+              ) : filteredCategories.length === 0 ? (
+                <div className="text-center py-12">
+                  {searchQuery ? (
+                    <div>
+                      <p className="text-muted-foreground">
+                        No categories found matching "{searchQuery}"
+                      </p>
+                      <Button
+                        variant="outline"
+                        onClick={clearSearch}
+                        className="mt-2"
+                      >
+                        Clear search
+                      </Button>
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground">
+                      No categories found. Create your first category!
+                    </p>
+                  )}
+                </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[600px] table-auto">
@@ -167,7 +208,7 @@ export default function CategoriesPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {categories.map((c) => (
+                      {filteredCategories.map((c) => (
                         <tr key={c.id} className="border-b">
                           <td className="py-3 px-2 md:px-4">{c.name}</td>
                           <td className="py-3 px-2 md:px-4">

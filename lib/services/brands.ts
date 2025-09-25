@@ -1,24 +1,19 @@
 // Brands
 import api from "@/lib/api";
 
-// type BrandCreatePayload = {
-//   name: string;
-//   description?: string;
-//   website?: string;
-//   is_active?: boolean;
-//   logo?: File | null;
-// };
-
-
+// Brands
+// lib/services/inventory.js - Update to use slug for updates
 export const brandsAPI = {
   getBrands: async (params?: Record<string, any>) => {
     const response = await api.get("/v1/inventory/brands/", { params });
-    return response.data.results ?? response.data;
-  },
-  getBrand: async (id: number) => {
-    const response = await api.get(`/v1/inventory/brands/${id}/`);
     return response.data;
   },
+  getBrand: async (slug: string) => {
+    const response = await api.get(`/v1/inventory/brands/${slug}/`);
+    return response.data;
+  },
+
+
   createBrand: async (data: Record<string, any> | FormData) => {
     const formData =
       data instanceof FormData
