@@ -1,6 +1,6 @@
-"use client"
 
-import type React from "react"
+
+"use client"
 
 import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
@@ -30,7 +30,7 @@ import { brandsAPI } from "@/lib/services/brands"
 import { metalTypesAPI } from "@/lib/services/Metal"
 import { stoneTypesAPI } from "@/lib/services/Stone"
 import { certificationsAPI } from "@/lib/services/certifications"
-
+import { hsncodesAPI } from "@/lib/services/HSN"
 
 const productSchema = z.object({
   name: z.string().min(1, "Product name is required"),
@@ -48,6 +48,170 @@ const productSchema = z.object({
   certification: z.string().min(1, "Certification is required"),
   hsn_code: z.string().min(1, "HSN code is required"),
 })
+
+// Quick Add HSN Code Dialog
+function QuickAddHSNCodeDialog({
+  onAdd,
+}: {
+  onAdd: (data: { item_code: string; item_name: string; item_type: string; GSTe: string; hsn_code: string; GST: string }) => Promise<void>
+}) {
+  const [open, setOpen] = useState(false)
+  const [itemCode, setItemCode] = useState("")
+  const [itemName, setItemName] = useState("")
+  // Example item types, replace with your actual options if needed
+  const itemTypeOptions = ["Goods", "Services", "Other"]
+  const [itemType, setItemType] = useState("")
+  const [GSTe, setGSTe] = useState("")
+  const [hsnCode, setHSNCode] = useState("")
+  const [GST, setGST] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string>("")
+
+  const handleAdd = async () => {
+    setError("")
+    // Validate all fields are non-empty and not just whitespace
+    if ([itemCode, itemName, itemType, GSTe, hsnCode, GST].some(f => !f || f.trim() === "")) {
+      setError("All fields are required and cannot be empty.")
+      return
+    }
+    // Parse GST and GSTe as numbers
+    const GSTeNum = Number(GSTe)
+    const GSTNum = Number(GST)
+    if (isNaN(GSTeNum) || isNaN(GSTNum)) {
+      setError("GST and GSTe must be numbers.")
+      return
+    }
+    setLoading(true)
+    try {
+      await onAdd({
+        item_code: itemCode.trim(),
+        item_name: itemName.trim(),
+        item_type: itemType.trim(),
+        GSTe: GSTeNum.toString(),
+        hsn_code: hsnCode.trim(),
+        GST: GSTNum.toString(),
+      })
+      setItemCode("")
+      setItemName("")
+      setItemType("")
+      setGSTe("")
+      setHSNCode("")
+      setGST("")
+      setOpen(false)
+    } catch (error: any) {
+      // Try to show the most detailed error from backend
+      let errMsg = "Failed to add HSN code"
+      if (error?.response?.data) {
+        if (typeof error.response.data === "string") {
+          errMsg = error.response.data
+        } else if (typeof error.response.data.detail === "string") {
+          errMsg = error.response.data.detail
+        } else if (typeof error.response.data === "object") {
+          errMsg = Object.entries(error.response.data).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`).join("; ")
+        }
+      }
+      setError(errMsg)
+      console.error("Failed to add HSN code:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button type="button" variant="outline" size="sm">
+          <Plus className="w-4 h-4 mr-1" />
+          Add HSN Code
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Add New HSN Code</DialogTitle>
+          <DialogDescription>Enter complete HSN code information.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="item-code">Item Code</Label>
+            <Input
+              id="item-code"
+              type="number"
+              placeholder="Enter numeric item code (e.g. 12345)"
+              value={itemCode}
+              onChange={e => setItemCode(e.target.value.replace(/[^0-9]/g, ""))}
+              min="0"
+            />
+          </div>
+          <div>
+            <Label htmlFor="item-name">Item Name</Label>
+            <Input
+              id="item-name"
+              placeholder="Enter item name (e.g. Gold Ring)"
+              value={itemName}
+              onChange={e => setItemName(e.target.value)}
+            />
+          </div>
+          <div>
+            <Label htmlFor="item-type">Item Type</Label>
+            <Select value={itemType} onValueChange={setItemType}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select item type" />
+              </SelectTrigger>
+              <SelectContent>
+                {itemTypeOptions.map((type) => (
+                  <SelectItem key={type} value={type}>{type}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="gste">GSTe (%)</Label>
+            <Input
+              id="gste"
+              type="number"
+              placeholder="Enter GSTe as number (e.g. 12)"
+              value={GSTe}
+              onChange={e => setGSTe(e.target.value.replace(/[^0-9.]/g, ""))}
+              min="0"
+            />
+          </div>
+          <div>
+            <Label htmlFor="hsn-code">HSN Code</Label>
+            <Input
+              id="hsn-code"
+              type="number"
+              placeholder="Enter numeric HSN code (e.g. 123456)"
+              value={hsnCode}
+              onChange={e => setHSNCode(e.target.value.replace(/[^0-9]/g, ""))}
+              min="0"
+            />
+          </div>
+          <div>
+            <Label htmlFor="gst">GST (%)</Label>
+            <Input
+              id="gst"
+              type="number"
+              placeholder="Enter GST as number (e.g. 18)"
+              value={GST}
+              onChange={e => setGST(e.target.value.replace(/[^0-9.]/g, ""))}
+              min="0"
+            />
+          </div>
+          {error && <div className="text-red-600 text-sm">{error}</div>}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleAdd} disabled={loading || !itemCode || !itemName || !itemType || !GSTe || !hsnCode || !GST}>
+            {loading ? "Adding..." : "Add HSN Code"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+
+    </Dialog>
+  )
+}
 
 type ProductFormData = z.infer<typeof productSchema>
 
@@ -244,35 +408,40 @@ function QuickAddBrandDialog({
   )
 }
 
+import { puritiesAPI } from "@/lib/services/Purities"
+
 function QuickAddMetalTypeDialog({
   onAdd,
 }: {
-  onAdd: (data: { name: string; description?: string; image?: File | null }) => Promise<void>
+  onAdd: (data: { metal_name: string; purity: number }) => Promise<void>
 }) {
   const [open, setOpen] = useState(false)
   const [metalName, setMetalName] = useState("")
   const [purity, setPurity] = useState("")
-  const [purityName, setPurityName] = useState("")
   const [loading, setLoading] = useState(false)
+  const [purities, setPurities] = useState<{id:number;name:string}[]>([])
+  const [error, setError] = useState<string>("")
 
-  // Example purity options, replace with your actual purity list if needed
-  const purityOptions = [
-    { id: 1, name: "steel" },
-    { id: 2, name: "gold" },
-    { id: 3, name: "silver" },
-    // ...add more as needed
-  ]
+  useEffect(() => {
+    if (open) {
+      puritiesAPI.getPurities().then(setPurities).catch(() => setPurities([]))
+    }
+  }, [open])
 
   const handleAdd = async () => {
-    if (!metalName.trim() || !purity || !purityName.trim()) return
+    setError("")
+    if (!metalName.trim() || !purity) {
+      setError("Metal name and purity are required.")
+      return
+    }
     setLoading(true)
     try {
-      await onAdd({ metal_name: metalName.trim(), purity: Number(purity), purity_name: purityName.trim() })
+      await onAdd({ metal_name: metalName.trim(), purity: Number(purity) })
       setMetalName("")
       setPurity("")
-      setPurityName("")
       setOpen(false)
-    } catch (error) {
+    } catch (error: any) {
+      setError(error?.response?.data?.detail || "Failed to add metal type")
       console.error("Failed to add metal type:", error)
     } finally {
       setLoading(false)
@@ -304,16 +473,12 @@ function QuickAddMetalTypeDialog({
           </div>
           <div>
             <Label htmlFor="purity">Purity</Label>
-            <Select value={purity} onValueChange={(value) => {
-              setPurity(value)
-              const selected = purityOptions.find((p) => p.id.toString() === value)
-              setPurityName(selected ? selected.name : "")
-            }}>
+            <Select value={purity} onValueChange={setPurity}>
               <SelectTrigger>
                 <SelectValue placeholder="Select purity" />
               </SelectTrigger>
               <SelectContent>
-                {purityOptions.map((option) => (
+                {purities.map((option) => (
                   <SelectItem key={option.id} value={option.id.toString()}>
                     {option.name}
                   </SelectItem>
@@ -321,12 +486,13 @@ function QuickAddMetalTypeDialog({
               </SelectContent>
             </Select>
           </div>
+          {error && <div className="text-red-600 text-sm">{error}</div>}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>
             Cancel
           </Button>
-          <Button onClick={handleAdd} disabled={loading || !metalName.trim() || !purity || !purityName.trim()}>
+          <Button onClick={handleAdd} disabled={loading || !metalName.trim() || !purity}>
             {loading ? "Adding..." : "Add Metal Type"}
           </Button>
         </DialogFooter>
@@ -499,6 +665,8 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
   const [images, setImages] = useState<File[]>([])
   const [loading, setLoading] = useState(false)
   const [loadingData, setLoadingData] = useState(true)
+  const [hsnCodes, setHsnCodes] = useState<any[]>([])
+
 
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
@@ -523,6 +691,15 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
   useEffect(() => {
     loadFormData()
   }, [])
+
+  useEffect(() => {
+  const fetchHSNCodes = async () => {
+    const data = await hsncodesAPI.getHSNCodes() // replace with actual API call
+    setHsnCodes(data)
+  }
+
+  fetchHSNCodes()
+}, [])
 
   const loadFormData = async () => {
     setLoadingData(true)
@@ -992,19 +1169,45 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
             </div>
 
             {/* HSN Code */}
-            <FormField
-              control={form.control}
-              name="hsn_code"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>HSN Code</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter HSN code" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+           <FormField
+  control={form.control}
+  name="hsn_code"
+  render={({ field }) => (
+    <FormItem>
+      <FormLabel>HSN Code</FormLabel>
+      <div className="flex gap-2 items-center">
+        <Select
+          onValueChange={field.onChange} // ✅ returns string directly
+          defaultValue={field.value?.toString()}
+        >
+          <FormControl>
+            <SelectTrigger className="flex-1">
+              <SelectValue placeholder="Select HSN code" />
+            </SelectTrigger>
+          </FormControl>
+          <SelectContent>
+            {hsnCodes.map((hsn: any) => (
+              <SelectItem key={hsn.id} value={hsn.hsn_code.toString()}>
+                {hsn.hsn_code} - {hsn.description}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <QuickAddHSNCodeDialog
+          onAdd={async (data) => {
+            const newHSN = await hsncodesAPI.createHSNCode(data)
+            setHsnCodes([...hsnCodes, newHSN])
+            form.setValue("hsn_code", newHSN.hsn_code.toString()) // ✅ convert to string
+          }}
+        />
+      </div>
+      <FormMessage />
+    </FormItem>
+  )}
+/>
+
+
 
             {/* Tags */}
             <div className="space-y-2">

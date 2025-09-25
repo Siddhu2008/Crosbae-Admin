@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useEffect } from "react"
@@ -6,6 +7,8 @@ import { DashboardLayout } from "@/components/dashboard-layout"
 import { DashboardHeader } from "@/components/dashboard-header"
 import { DataTable } from "@/components/data-table"
 import { ProductForm } from "@/components/product-form"
+import { CertificationForm } from "@/components/certification-form"
+import { certificationsAPI } from "@/lib/services/certifications"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -48,10 +51,32 @@ import {
   Download,
   Filter,
 } from "lucide-react"
-import {  categoriesAPI } from "@/lib/services/categories";
-import { brandsAPI } from "@/lib/services/brands";
-import { inventoryAPI } from "@/lib/services/inventory";
+import { categoriesAPI } from "@/lib/services/categories"
+import { brandsAPI } from "@/lib/services/brands"
+import { inventoryAPI } from "@/lib/services/inventory"
 import { useToast } from "@/hooks/use-toast"
+import { metalTypesAPI } from "@/lib/services/Metal"
+import { puritiesAPI } from "@/lib/services/Purities"
+interface MetalType {
+  id: number;
+  metal_name: string;
+  purity: number;
+  created_at: string;
+}
+
+interface Purity {
+  id: number;
+  name: string;
+}
+
+interface Certification {
+  id: number;
+  name: string;
+  description?: string;
+  image_url?: string;
+  created_at?: string;
+  updated_at?: string;
+}
 
 interface Product {
   id: number
@@ -68,6 +93,151 @@ interface Product {
 }
 
 export default function InventoryPage() {
+  // Metal Types state
+  const [metalTypes, setMetalTypes] = useState<MetalType[]>([])
+  const [purities, setPurities] = useState<Purity[]>([])
+  const [showMetalForm, setShowMetalForm] = useState(false)
+  const [editingMetal, setEditingMetal] = useState<MetalType | null>(null)
+
+  useEffect(() => {
+    loadMetalTypes()
+    loadPurities()
+  }, [])
+
+  const loadMetalTypes = async () => {
+    try {
+      const data = await metalTypesAPI.getMetalTypes()
+      setMetalTypes(data)
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to load metal types", variant: "destructive" })
+    }
+  }
+
+  const loadPurities = async () => {
+    try {
+      const data = await puritiesAPI.getPurities()
+      setPurities(data)
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to load purities", variant: "destructive" })
+    }
+  }
+
+  const handleCreateMetal = async (formData: { metal_name: string; purity: number }) => {
+    try {
+      await metalTypesAPI.createMetalType(formData)
+      toast({ title: "Success", description: "Metal type added" })
+      setShowMetalForm(false)
+      loadMetalTypes()
+    } catch (error: any) {
+      toast({ title: "Error", description: error?.response?.data?.detail || "Failed to add metal type", variant: "destructive" })
+    }
+  }
+
+  const handleUpdateMetal = async (formData: { metal_name: string; purity: number }) => {
+    if (!editingMetal) return
+    try {
+      await metalTypesAPI.updateMetalType(editingMetal.id, formData)
+      toast({ title: "Success", description: "Metal type updated" })
+      setEditingMetal(null)
+      setShowMetalForm(false)
+      loadMetalTypes()
+    } catch (error: any) {
+      toast({ title: "Error", description: error?.response?.data?.detail || "Failed to update metal type", variant: "destructive" })
+    }
+  }
+
+  const handleDeleteMetal = async (id: number) => {
+    if (!confirm("Are you sure you want to delete this metal type?")) return
+    try {
+      await metalTypesAPI.deleteMetalType(id)
+      toast({ title: "Success", description: "Metal type deleted" })
+      loadMetalTypes()
+    } catch (error: any) {
+      toast({ title: "Error", description: error?.response?.data?.detail || "Failed to delete metal type", variant: "destructive" })
+    }
+  }
+        {/* Metal Types Section */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Metal Types</CardTitle>
+            <Button onClick={() => { setEditingMetal(null); setShowMetalForm(true) }}>
+              <Plus className="mr-2 h-4 w-4" /> Add Metal Type
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr>
+                    <th className="px-4 py-2 text-left">Name</th>
+                    <th className="px-4 py-2 text-left">Purity</th>
+                    <th className="px-4 py-2 text-left">Created At</th>
+                    <th className="px-4 py-2 text-left">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {metalTypes.map((metal) => (
+                    <tr key={metal.id} className="border-b">
+                      <td className="px-4 py-2">{metal.metal_name}</td>
+                      <td className="px-4 py-2">{purities.find(p => p.id === metal.purity)?.name || metal.purity}</td>
+                      <td className="px-4 py-2">{new Date(metal.created_at).toLocaleDateString()}</td>
+                      <td className="px-4 py-2">
+                        <Button size="sm" variant="outline" onClick={() => { setEditingMetal(metal); setShowMetalForm(true) }}><Edit className="w-4 h-4" /></Button>
+                        <Button size="sm" variant="destructive" className="ml-2" onClick={() => handleDeleteMetal(metal.id)}><Trash2 className="w-4 h-4" /></Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Metal Type Add/Edit Dialog */}
+        <Dialog open={showMetalForm} onOpenChange={setShowMetalForm}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>{editingMetal ? "Edit Metal Type" : "Add Metal Type"}</DialogTitle>
+            </DialogHeader>
+            <form
+              onSubmit={e => {
+                e.preventDefault();
+                const form = e.target as HTMLFormElement;
+                const metal_name = (form.elements.namedItem("metal_name") as HTMLInputElement).value;
+                const purity = Number((form.elements.namedItem("purity") as HTMLSelectElement).value);
+                if (editingMetal) {
+                  handleUpdateMetal({ metal_name, purity });
+                } else {
+                  handleCreateMetal({ metal_name, purity });
+                }
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <Label htmlFor="metal_name">Metal Name</Label>
+                <Input id="metal_name" name="metal_name" defaultValue={editingMetal?.metal_name || ""} required />
+              </div>
+              <div>
+                <Label htmlFor="purity">Purity</Label>
+                <Select name="purity" defaultValue={editingMetal?.purity?.toString() || ""} required>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select purity" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {purities.map((p) => (
+                      <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => { setShowMetalForm(false); setEditingMetal(null) }}>Cancel</Button>
+                <Button type="submit">{editingMetal ? "Update" : "Add"}</Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+  const { toast } = useToast()
   const [products, setProducts] = useState<Product[]>([])
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
@@ -88,7 +258,6 @@ export default function InventoryPage() {
   const [categories, setCategories] = useState([])
   const [brands, setBrands] = useState([])
 
-  const { toast } = useToast()
 
   useEffect(() => {
     loadProducts()
