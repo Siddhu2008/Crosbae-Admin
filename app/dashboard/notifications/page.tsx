@@ -31,8 +31,9 @@ export default function NotificationPage() {
       try {
         // @ts-ignore
         const { notificationsAPI } = await import("@/lib/services/notifications")
-        const data = await notificationsAPI.getNotifications()
-        setNotifications(data)
+  const data = await notificationsAPI.getNotifications()
+  console.log('All Notifications:', data)
+  setNotifications(data)
       } catch (error) {
         toast({
           title: "Error",

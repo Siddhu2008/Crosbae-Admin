@@ -12,20 +12,26 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { MoreHorizontal, Star, MessageSquare, CheckCircle, XCircle, Plus, Eye } from "lucide-react"
 import { reviewsAPI } from "@/lib/services/reviews"
+import { customersAPI } from "@/lib/services/customers"
+import { productsAPI } from "@/lib/services/Product"
+import { mediaAPI } from "@/lib/services/media"
 import { useToast } from "@/hooks/use-toast"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 
 const testimonialSchema = z.object({
-  customer_name: z.string().min(1, "Customer name is required"),
+  customer_id: z.string().min(1, "Customer is required"),
   content: z.string().min(1, "Content is required"),
   rating: z.number().min(1).max(5),
-  product_name: z.string().optional(),
-  is_featured: z.boolean().default(false),
+  product_id: z.string().min(1, "Product is required"),
+  is_featured: z.boolean(),
+  image_url: z.string().optional(),
+  video_url: z.string().optional(),
 })
 
 type TestimonialFormData = z.infer<typeof testimonialSchema>
@@ -57,21 +63,34 @@ export default function ReviewsPage() {
   const [activeTab, setActiveTab] = useState<"reviews" | "testimonials">("reviews")
   const [showTestimonialForm, setShowTestimonialForm] = useState(false)
   const [editingTestimonial, setEditingTestimonial] = useState<Testimonial | null>(null)
+  const [customers, setCustomers] = useState<any[]>([])
+  const [products, setProducts] = useState<any[]>([])
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [videoFile, setVideoFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string>("")
+  const [videoPreview, setVideoPreview] = useState<string>("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [uploadError, setUploadError] = useState<string>("")
   const { toast } = useToast()
 
   const form = useForm<TestimonialFormData>({
     resolver: zodResolver(testimonialSchema),
     defaultValues: {
-      customer_name: "",
+      customer_id: "",
       content: "",
       rating: 5,
-      product_name: "",
+      product_id: "",
       is_featured: false,
+      image_url: undefined,
+      video_url: undefined,
     },
+    mode: "onChange",
   })
 
   useEffect(() => {
     loadData()
+    customersAPI.getCustomers().then(setCustomers)
+    productsAPI.getProducts().then(setProducts)
   }, [])
 
   const loadData = async () => {
@@ -83,6 +102,8 @@ export default function ReviewsPage() {
       ]);
       setReviews(reviewsData.results || []);
       setTestimonials(testimonialsData.results || []);
+      // Debug: log all reviews and testimonials
+      
     } catch (error) {
       console.error("Failed to load data:", error);
       setReviews([]);
@@ -129,13 +150,46 @@ export default function ReviewsPage() {
   }
 
   const handleCreateTestimonial = async (data: TestimonialFormData) => {
+    setIsSubmitting(true)
+    setUploadError("")
     try {
-      await reviewsAPI.createTestimonial(data)
+      let image_url = ""
+      let video_url = ""
+      if (imageFile) {
+        try {
+          const imgRes = await mediaAPI.uploadFile(imageFile)
+          image_url = imgRes.url || imgRes.file_url || ""
+        } catch (e) {
+          setUploadError("Failed to upload image.")
+          setIsSubmitting(false)
+          return
+        }
+      }
+      if (videoFile) {
+        try {
+          const vidRes = await mediaAPI.uploadFile(videoFile)
+          video_url = vidRes.url || vidRes.file_url || ""
+        } catch (e) {
+          setUploadError("Failed to upload video.")
+          setIsSubmitting(false)
+          return
+        }
+      }
+      const payload = {
+        ...data,
+        image_url: image_url || undefined,
+        video_url: video_url || undefined,
+      }
+      await reviewsAPI.createTestimonial(payload)
       toast({
         title: "Success",
         description: "Testimonial created successfully",
       })
       setShowTestimonialForm(false)
+      setImageFile(null)
+      setVideoFile(null)
+      setImagePreview("")
+      setVideoPreview("")
       form.reset()
       loadData()
     } catch (error) {
@@ -144,20 +198,54 @@ export default function ReviewsPage() {
         description: "Failed to create testimonial",
         variant: "destructive",
       })
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
   const handleUpdateTestimonial = async (data: TestimonialFormData) => {
     if (!editingTestimonial) return
-
+    setIsSubmitting(true)
+    setUploadError("")
     try {
-      await reviewsAPI.updateTestimonial(editingTestimonial.id, data)
+      let image_url = data.image_url || ""
+      let video_url = data.video_url || ""
+      if (imageFile) {
+        try {
+          const imgRes = await mediaAPI.uploadFile(imageFile)
+          image_url = imgRes.url || imgRes.file_url || ""
+        } catch (e) {
+          setUploadError("Failed to upload image.")
+          setIsSubmitting(false)
+          return
+        }
+      }
+      if (videoFile) {
+        try {
+          const vidRes = await mediaAPI.uploadFile(videoFile)
+          video_url = vidRes.url || vidRes.file_url || ""
+        } catch (e) {
+          setUploadError("Failed to upload video.")
+          setIsSubmitting(false)
+          return
+        }
+      }
+      const payload = {
+        ...data,
+        image_url: image_url || undefined,
+        video_url: video_url || undefined,
+      }
+      await reviewsAPI.updateTestimonial(editingTestimonial.id, payload)
       toast({
         title: "Success",
         description: "Testimonial updated successfully",
       })
       setEditingTestimonial(null)
       setShowTestimonialForm(false)
+      setImageFile(null)
+      setVideoFile(null)
+      setImagePreview("")
+      setVideoPreview("")
       form.reset()
       loadData()
     } catch (error) {
@@ -166,6 +254,8 @@ export default function ReviewsPage() {
         description: "Failed to update testimonial",
         variant: "destructive",
       })
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -399,13 +489,23 @@ export default function ReviewsPage() {
       {/* Data Table */}
       <Card>
         <CardContent className="overflow-x-auto">
-          <DataTable
-            columns={activeTab === "reviews" ? reviewColumns : testimonialColumns}
-            data={activeTab === "reviews" ? reviews : testimonials}
-            searchKey={activeTab === "reviews" ? "customer" : "customer_name"}
-            searchPlaceholder={activeTab === "reviews" ? "Search reviews..." : "Search testimonials..."}
-            loading={loading}
-          />
+          {activeTab === "reviews" ? (
+            <DataTable
+              columns={reviewColumns}
+              data={reviews}
+              searchKey="customer"
+              searchPlaceholder="Search reviews..."
+              // loading={loading}
+            />
+          ) : (
+            <DataTable
+              columns={testimonialColumns}
+              data={testimonials}
+              searchKey="customer_name"
+              searchPlaceholder="Search testimonials..."
+              // loading={loading}
+            />
+          )}
         </CardContent>
       </Card>
 
@@ -418,7 +518,6 @@ export default function ReviewsPage() {
               setEditingTestimonial(null)
               form.reset()
             }}
-            leftIcon={<Plus />}
           >
             Add Testimonial
           </Button>
@@ -427,109 +526,115 @@ export default function ReviewsPage() {
 
       {/* Testimonial Form Dialog */}
       <Dialog open={showTestimonialForm} onOpenChange={setShowTestimonialForm}>
-        <DialogContent className="sm:max-w-lg w-full">
+        <DialogContent className="sm:max-w-lg w-full" description="Fill out the testimonial details and submit.">
           <DialogHeader>
             <DialogTitle>{editingTestimonial ? "Edit Testimonial" : "Add Testimonial"}</DialogTitle>
           </DialogHeader>
           <Form {...form}>
-            <form
-              onSubmit={form.handleSubmit(editingTestimonial ? handleUpdateTestimonial : handleCreateTestimonial)}
-              className="space-y-4"
-            >
-              <FormField
-                control={form.control}
-                name="customer_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Customer Name</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Customer name" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="content"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Content</FormLabel>
-                    <FormControl>
-                      <Textarea {...field} placeholder="Testimonial content" rows={4} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="rating"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Rating</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        type="number"
-                        min={1}
-                        max={5}
-                        step={1}
-                        placeholder="Rating (1 to 5)"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="product_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Product Name (optional)</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Product name" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="is_featured"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
-                    <FormControl>
-                      <input
-                        type="checkbox"
-                        checked={field.value}
-                        onChange={e => field.onChange(e.target.checked)}
-                        className="h-4 w-4 rounded border"
-                      />
-                    </FormControl>
-                    <FormLabel className="font-normal">Feature this testimonial</FormLabel>
-                  </FormItem>
-                )}
-              />
-
-              <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2 p-5">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full sm:w-auto"
-                  onClick={() => {
-                    setShowTestimonialForm(false)
-                    setEditingTestimonial(null)
-                    form.reset()
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" className="w-full sm:w-auto">
-                  {editingTestimonial ? "Update" : "Create"} Testimonial
-                </Button>
-              </div>
+            
+              <form
+                onSubmit={form.handleSubmit((data: TestimonialFormData) => {
+                  if (editingTestimonial) {
+                    handleUpdateTestimonial(data)
+                  } else {
+                    handleCreateTestimonial(data)
+                  }
+                })}
+                className="flex flex-col gap-4 w-full max-w-full sm:max-w-lg mx-auto px-2 sm:px-0"
+              >
+  {/* Customer & Product in one row */}
+  <div className="flex flex-col sm:flex-row gap-4 w-full">
+    <div className="flex-1">
+      <FormLabel htmlFor="customer_id">Customer</FormLabel>
+      <Select value={form.watch("customer_id")} onValueChange={val => form.setValue("customer_id", val)}>
+        <SelectTrigger id="customer_id" className="w-full">
+          <SelectValue placeholder="Select customer" />
+        </SelectTrigger>
+        <SelectContent className="max-h-48 w-full">
+          {customers.map((c) => (
+            <SelectItem key={c.id} value={String(c.id)}>{c.name || c.email || c.id}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+    <div className="flex-1">
+      <FormLabel htmlFor="product_id">Product</FormLabel>
+      <Select value={form.watch("product_id")} onValueChange={val => form.setValue("product_id", val)}>
+        <SelectTrigger id="product_id" className="w-full">
+          <SelectValue placeholder="Select product" />
+        </SelectTrigger>
+        <SelectContent className="max-h-48 w-full">
+          {products.map((p) => (
+            <SelectItem key={p.id} value={String(p.id)}>{p.name || p.title || p.id}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  </div>
+    
+  {/* Content */}
+  <div>
+    <FormLabel htmlFor="content">Content</FormLabel>
+    <Textarea id="content" {...form.register("content", { required: true })} placeholder="Testimonial content" rows={4} required />
+  </div>
+   
+  {/* Product & Rating in one row */}
+  <div className="flex flex-col sm:flex-row gap-4 w-full">
+    
+    <div className="flex-1">
+      <FormLabel htmlFor="rating">Rating</FormLabel>
+      <Input id="rating" type="number" min={1} max={5} {...form.register("rating", { valueAsNumber: true, required: true })} placeholder="Rating (1-5)" required className="w-full" />
+    </div>
+  </div>
+    
+  {/* Image & Video in one row */}
+  <div className="flex flex-col sm:flex-row gap-4 w-full">
+    <div className="flex-1">
+      <FormLabel htmlFor="image">Image (optional)</FormLabel>
+      <Input id="image" type="file" accept="image/*" onChange={e => {
+        const file = e.target.files?.[0] || null
+        setImageFile(file)
+        setImagePreview(file ? URL.createObjectURL(file) : "")
+      }} className="w-full" />
+      {imagePreview && (
+        <div className="mt-2 flex justify-center"><img src={imagePreview} alt="Preview" className="max-h-32 rounded border w-auto max-w-full" /></div>
+      )}
+    </div>
+    <div className="flex-1">
+      <FormLabel htmlFor="video">Video (optional)</FormLabel>
+      <Input id="video" type="file" accept="video/*" onChange={e => {
+        const file = e.target.files?.[0] || null
+        setVideoFile(file)
+        setVideoPreview(file ? URL.createObjectURL(file) : "")
+      }} className="w-full" />
+      {videoPreview && (
+        <div className="mt-2 flex justify-center">
+          <video src={videoPreview} controls className="max-h-32 rounded border w-auto max-w-full" />
+        </div>
+      )}
+    </div>
+  </div>
+    
+  {/* Is Featured */}
+  <div className="flex items-center space-x-2">
+    <input id="is_featured" type="checkbox" checked={form.watch("is_featured")} onChange={e => form.setValue("is_featured", e.target.checked)} className="h-4 w-4 rounded border" />
+    <FormLabel htmlFor="is_featured" className="font-normal">Featured</FormLabel>
+  </div>
+  {/* Created At (read-only, only on edit) */}
+  {editingTestimonial && (
+    <div>
+      <FormLabel>Created At</FormLabel>
+      <Input value={new Date(editingTestimonial.created_at).toLocaleString()} readOnly disabled />
+    </div>
+  )}
+  {uploadError && <div className="text-red-500 text-sm mb-2">{uploadError}</div>}
+  <div className="flex justify-end space-x-2">
+    <Button type="button" variant="outline" onClick={() => { setShowTestimonialForm(false); setEditingTestimonial(null); form.reset(); setImagePreview(""); setVideoPreview(""); setImageFile(null); setVideoFile(null); }}>Cancel</Button>
+    <Button type="submit" disabled={isSubmitting}>
+      {isSubmitting ? "Submitting..." : editingTestimonial ? "Update" : "Create"} Testimonial
+    </Button>
+  </div>
+    
             </form>
           </Form>
         </DialogContent>

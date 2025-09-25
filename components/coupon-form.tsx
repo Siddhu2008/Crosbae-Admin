@@ -59,7 +59,7 @@ export function CouponForm({ coupon, onSubmit, onCancel }: CouponFormProps) {
       code: coupon?.code || "",
       description: coupon?.description || "",
       discount_type: coupon?.discount_type || "percentage",
-      discount_value: coupon?.discount_value || 0,
+      discount_value: coupon?.discount_value ?? undefined,
       min_order_amount: coupon?.min_order_amount || undefined,
       max_discount_amount: coupon?.max_discount_amount || undefined,
       start_date: coupon?.start_date ? new Date(coupon.start_date) : new Date(),
@@ -179,8 +179,11 @@ export function CouponForm({ coupon, onSubmit, onCancel }: CouponFormProps) {
                           type="number"
                           step="0.01"
                           placeholder={discountType === "percentage" ? "20" : "500"}
-                          {...field}
-                          onChange={(e) => field.onChange(Number.parseFloat(e.target.value) || 0)}
+                          value={field.value === undefined || field.value === null ? "" : field.value}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/,/g, "");
+                            field.onChange(val === "" ? undefined : Number(val));
+                          }}
                         />
                       </FormControl>
                       <FormMessage />
@@ -242,36 +245,38 @@ export function CouponForm({ coupon, onSubmit, onCancel }: CouponFormProps) {
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Validity & Usage</h3>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
                 <FormField
                   control={form.control}
                   name="start_date"
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
                       <FormLabel>Start Date</FormLabel>
+                      <span className="text-xs text-muted-foreground mb-1">Select when the coupon becomes active.</span>
                       <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground",
-                              )}
-                            >
-                              {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
+                        <PopoverTrigger>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full text-left font-normal",
+                              !field.value && "text-muted-foreground",
+                            )}
+                          >
+                            {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            disabled={(date) => date < new Date("1900-01-01")}
-                            initialFocus
-                          />
+                        <PopoverContent className="w-auto p-0 z-[9999] border-2 border-red-500" align="start">
+                          <div style={{zIndex: 9999, position: 'relative'}}>
+                            <Calendar
+                              mode="single"
+                              selected={field.value instanceof Date ? field.value : field.value ? new Date(field.value) : undefined}
+                              onSelect={(date) => field.onChange(date)}
+                              disabled={(date) => date < new Date("1900-01-01")}
+                              initialFocus
+                              className="border-2 m-3 border-blue-500"
+                            />
+                          </div>
                         </PopoverContent>
                       </Popover>
                       <FormMessage />
@@ -285,26 +290,26 @@ export function CouponForm({ coupon, onSubmit, onCancel }: CouponFormProps) {
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
                       <FormLabel>End Date</FormLabel>
+                      <span className="text-xs text-muted-foreground mb-1">Select when the coupon expires.</span>
                       <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground",
-                              )}
-                            >
-                              {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
+                        <PopoverTrigger>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full text-left font-normal",
+                              !field.value && "text-muted-foreground",
+                            )}
+                          >
+                            {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
                         </PopoverTrigger>
+      
                         <PopoverContent className="w-auto p-0" align="start">
                           <Calendar
                             mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
+                            selected={field.value instanceof Date ? field.value : field.value ? new Date(field.value) : undefined}
+                            onSelect={(date) => field.onChange(date)}
                             disabled={(date) => date < new Date("1900-01-01")}
                             initialFocus
                           />
@@ -316,24 +321,27 @@ export function CouponForm({ coupon, onSubmit, onCancel }: CouponFormProps) {
                 />
               </div>
 
-              <FormField
-                control={form.control}
-                name="max_uses"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Maximum Uses (Optional)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="100"
-                        {...field}
-                        onChange={(e) => field.onChange(e.target.value ? Number.parseInt(e.target.value) : undefined)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                <FormField
+                  control={form.control}
+                  name="max_uses"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Maximum Uses (Optional)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          placeholder="100"
+                          value={field.value === undefined || field.value === null ? "" : field.value}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/,/g, "");
+                            field.onChange(val === "" ? undefined : Number(val));
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
             </div>
 
             {/* Form Actions */}

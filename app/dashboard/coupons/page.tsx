@@ -53,9 +53,12 @@ export default function CouponsPage() {
   const loadCoupons = async () => {
     setLoading(true);
     try {
-      const response = await couponsAPI.getCoupons();
-      // adjust depending on API (might be response.data or response.data.results)
-      setCoupons(response.results || response);
+  const response = await couponsAPI.getCoupons();
+  // adjust depending on API (might be response.data or response.data.results)
+  const allCoupons = response.results || response;
+  console.log('All Coupons:', allCoupons);
+  setCoupons(allCoupons);
+      
     } catch (error: any) {
       console.error("Failed to load coupons:", error);
       toast({
@@ -70,7 +73,7 @@ export default function CouponsPage() {
 
   useEffect(() => {
     loadCoupons();
-  }, []);
+  }, []); 
 
   const handleCreateCoupon = async (data: CouponFormValues) => {
   try {
@@ -247,38 +250,39 @@ export default function CouponsPage() {
     },
     {
       id: "actions",
+      header: "Actions",
       cell: ({ row }) => {
         const coupon = row.original;
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => copyToClipboard(coupon.code)}>
-                <Copy className="mr-2 h-4 w-4" />
-                Copy Code
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => {
-                  setEditingCoupon(coupon);
-                  setShowForm(true);
-                }}
-              >
-                <Edit className="mr-2 h-4 w-4" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => handleDeleteCoupon(coupon.id)}
-                className="text-destructive"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => copyToClipboard(coupon.code)}
+              title="Copy Code"
+            >
+              <Copy className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                setEditingCoupon(coupon);
+                setShowForm(true);
+              }}
+              title="Edit"
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => handleDeleteCoupon(coupon.id)}
+              title="Delete"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
         );
       },
     },

@@ -294,7 +294,13 @@ export default function CategoriesPage() {
                   <SelectContent>
                     <SelectItem value="none">None</SelectItem>
                     {categories
-                      .filter((cat) => editing?.id !== cat.id)
+                      .filter(
+                        (cat) =>
+                          editing?.id !== cat.id &&
+                          cat.id !== undefined &&
+                          cat.id !== null &&
+                          String(cat.id) !== ""
+                      )
                       .map((cat) => (
                         <SelectItem key={cat.id} value={String(cat.id)}>
                           {cat.name}

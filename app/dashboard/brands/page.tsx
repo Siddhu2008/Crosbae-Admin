@@ -361,14 +361,14 @@ export default function BrandsPage() {
               <div>
                 <Label htmlFor="types">Brand Type</Label>
                 <Select
-                  value={types}
-                  onValueChange={setTypes}
+                  value={types === "" ? "none" : types}
+                  onValueChange={(value) => setTypes(value === "none" ? "" : value)}
                 >
                   <SelectTrigger id="types" className="w-full">
                     <SelectValue placeholder="Select type (optional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {BRAND_TYPES.map((type) => (
                       <SelectItem key={type.value} value={type.value}>
                         {type.label}
