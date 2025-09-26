@@ -40,6 +40,12 @@ const navigation = [
   { name: "Media", href: "/dashboard/media", icon: Upload },
   { name: "Reviews", href: "/dashboard/reviews", icon: Star },
   { name: "Notifications", href: "/dashboard/notifications", icon: Bell },
+  { name: "Metal Type", href: "/dashboard/metals", icon: Star },
+  { name: "Stone Type", href: "/dashboard/stones", icon: Star },
+  { name: "Certificates", href: "/dashboard/certificates", icon: Star },
+  { name: "Purity", href: "/dashboard/purity", icon: Star },
+  { name: "HSN Code", href: "/dashboard/hsn", icon: Star },
+
 ]
 
 interface AdminSidebarProps {

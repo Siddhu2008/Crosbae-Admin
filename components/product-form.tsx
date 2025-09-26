@@ -504,7 +504,7 @@ function QuickAddMetalTypeDialog({
 function QuickAddStoneTypeDialog({
   onAdd,
 }: {
-  onAdd: (data: { name: string; description?: string; image?: File | null }) => Promise<void>
+  onAdd: (data: { stone_name: string; description?: string; image?: File | null }) => Promise<void>
 }) {
   const [open, setOpen] = useState(false)
   const [stoneName, setStoneName] = useState("")
