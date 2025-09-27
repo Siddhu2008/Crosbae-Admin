@@ -1,3 +1,15 @@
+interface MetalFormProps {
+  metal?: {
+    metal_name: string;
+    purity: string | number;
+    // add other fields as needed
+  };
+  purities?: { id: number; name: string; description?: string }[];
+  onAddPurity?: () => void;
+  onSubmit: (data: MetalFormValues) => void;
+  onCancel?: () => void;
+  className?: string;
+}
 "use client";
 
 import * as React from "react";
@@ -42,8 +54,8 @@ export function MetalForm({
   const form = useForm<MetalFormValues>({
     resolver: zodResolver(metalSchema),
     defaultValues: {
-      name: metal?.name ?? "",
-      purity: metal?.purity ?? (purities.length > 0 ? purities[0].id.toString() : ""),
+      name: metal?.metal_name ?? "",
+      purity: metal?.purity ? String(metal.purity) : (purities.length > 0 ? purities[0].id.toString() : ""),
     },
   });
 
@@ -92,8 +104,8 @@ export function MetalForm({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {purities.map((p) => (
-                        <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>
+                      {(purities as { id: number; name: string; description?: string }[]).map((p) => (
+                        <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

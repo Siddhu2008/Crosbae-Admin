@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import {
@@ -71,18 +72,36 @@ export function NotificationForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Customer</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select customer" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {customers.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex gap-2 items-center">
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder={customers.length ? "Select customer" : "No customers found"} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {customers.length === 0 ? (
+                        <div className="px-4 py-2 text-muted-foreground">No customers available</div>
+                      ) : (
+                        customers.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button type="button" variant="outline" size="sm">Add Customer</Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Add Customer</DialogTitle>
+                      </DialogHeader>
+                      {/* TODO: Add your customer form here */}
+                      <div className="text-muted-foreground">Customer form goes here.</div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
                 <FormMessage />
               </FormItem>
             )}

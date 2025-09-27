@@ -57,6 +57,7 @@ export default function CustomersPage() {
     setLoading(true)
     try {
       const response = await customersAPI.getCustomers()
+      console.log("Customers",response)
       setCustomers(response.results || response)
     } catch (error) {
       console.error("Failed to load customers:", error)

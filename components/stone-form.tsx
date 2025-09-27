@@ -56,11 +56,13 @@ export function StoneForm({
   const isLoading = form.formState.isSubmitting;
 
   const handleFormSubmit = (values: StoneFormValues) => {
-    const payload = {
-      ...values,
-      image: image ?? undefined,
-    };
-    onSubmit(payload);
+    // Always use FormData for backend compatibility
+    const formData = new FormData();
+    formData.append("stone_name", values.name);
+    if (image) {
+      formData.append("image", image);
+    }
+    onSubmit(formData);
   };
 
   return (

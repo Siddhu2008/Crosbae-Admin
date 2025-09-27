@@ -271,6 +271,7 @@ export default function InventoryPage() {
   const loadProducts = async () => {
     try {
       const response = await inventoryAPI.getProducts();
+      console.log("Fetched products:", response);
       setProducts(response.results || response);
     } catch (error) {
       console.error("Failed to load products:", error);

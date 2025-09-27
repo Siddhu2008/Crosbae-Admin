@@ -61,6 +61,7 @@ export default function PaymentsPage() {
     try {
       const params = statusFilter !== "all" ? { status: statusFilter } : {};
       const response = await paymentsAPI.getPayments(params);
+      console.log("All Payments",response)
       setPayments(response.results || response);
     } catch (error) {
       console.error("Failed to load payments:", error);

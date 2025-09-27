@@ -60,10 +60,10 @@ export default function MediaPage() {
           title: "Success",
           description: `${acceptedFiles.length} file(s) uploaded successfully`,
         })
-      } catch (error) {
+      } catch (error: any) {
         toast({
           title: "Error",
-          description: "Failed to upload files",
+          description: error?.response?.data?.message || error?.message || "Failed to upload files",
           variant: "destructive",
         })
       } finally {

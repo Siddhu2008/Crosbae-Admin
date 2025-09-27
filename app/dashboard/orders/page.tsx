@@ -68,17 +68,21 @@ export default function OrdersPage() {
   }, [statusFilter])
 
   const loadOrders = async () => {
-    try {
-      const params = statusFilter !== "all" ? { status: statusFilter } : {};
-      const response = await ordersAPI.getOrders(params);
-      setOrders(response.results || response);
-    } catch (error) {
-      console.error("Failed to load orders:", error);
-      setOrders([]);
-    } finally {
-      setLoading(false);
-    }
-  }  
+  try {
+    const params = statusFilter !== "all" ? { status: statusFilter } : {};
+    const response = await ordersAPI.getOrders(params);
+    
+    // 👇 Log the entire response for debugging
+    console.log("Fetched Orders:", response);
+    
+    setOrders(response.results || response);
+  } catch (error) {
+    console.error("Failed to load orders:", error);
+    setOrders([]);
+  } finally {
+    setLoading(false);
+  }
+}
 
   const handleStatusUpdate = async (orderId: string, newStatus: string) => {
     try {

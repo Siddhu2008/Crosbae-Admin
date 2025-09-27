@@ -31,31 +31,33 @@ export default function NotificationPage() {
   const [customers, setCustomers] = useState<{ id: string; name: string }[]>([])
   const { toast } = useToast()
 
+  const fetchNotifications = async () => {
+    setLoading(true);
+    try {
+      // @ts-ignore
+      const { notificationsAPI } = await import("@/lib/services/notifications")
+      const data = await notificationsAPI.getNotifications()
+      setNotifications(
+        data.map((n: any) => ({
+          ...n,
+          customer:
+            typeof n.customer === "object"
+              ? n.customer
+              : { id: n.customer, name: n.customer_name || n.customer || "Unknown" },
+        }))
+      );
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load notifications",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchNotifications = async () => {
-      try {
-        // @ts-ignore
-        const { notificationsAPI } = await import("@/lib/services/notifications")
-        const data = await notificationsAPI.getNotifications();
-        setNotifications(
-          data.map((n: any) => ({
-            ...n,
-            customer:
-              typeof n.customer === "object"
-                ? n.customer
-                : { id: n.customer, name: n.customer_name || n.customer || "Unknown" },
-          }))
-        );
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: "Failed to load notifications",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
     const fetchCustomers = async () => {
       try {
         // @ts-ignore
@@ -82,10 +84,10 @@ export default function NotificationPage() {
   const handleDelete = async (id: number) => {
     try {
       // @ts-ignore
-      const { notificationsAPI } = await import("@/lib/api")
+      const { notificationsAPI } = await import("@/lib/services/notifications")
       await notificationsAPI.deleteNotification(id)
-      setNotifications((prev) => prev.filter((n) => n.id !== id))
       toast({ title: "Deleted", description: "Notification deleted" })
+      fetchNotifications();
     } catch {
       toast({ title: "Error", description: "Failed to delete notification", variant: "destructive" })
     }
@@ -95,21 +97,12 @@ export default function NotificationPage() {
     try {
       // @ts-ignore
       const { notificationsAPI } = await import("@/lib/services/notifications");
-      const newNotification = await notificationsAPI.createNotification({
+      await notificationsAPI.createNotification({
         ...data,
         customer: data.customer,
       });
-      setNotifications((prev) => [
-        {
-          ...newNotification,
-          customer:
-            typeof newNotification.customer === "object"
-              ? newNotification.customer
-              : { id: newNotification.customer, name: newNotification.customer_name || newNotification.customer || "Unknown" },
-        },
-        ...prev,
-      ]);
       toast({ title: "Created", description: "Notification sent" });
+      fetchNotifications();
     } catch {
       toast({ title: "Error", description: "Failed to create notification", variant: "destructive" });
     }
@@ -181,7 +174,7 @@ export default function NotificationPage() {
           </div>
 
           {/* Create Notification Dialog */}
-          <div className="flex justify-end mb-4">
+          <div className="flex justify-between mb-4">
             <Dialog>
               <DialogTrigger asChild>
                 <Button variant="default">
@@ -199,6 +192,9 @@ export default function NotificationPage() {
                 />
               </DialogContent>
             </Dialog>
+            <Button variant="outline" onClick={fetchNotifications}>
+              Refresh
+            </Button>
           </div>
 
           {/* Notification List */}
