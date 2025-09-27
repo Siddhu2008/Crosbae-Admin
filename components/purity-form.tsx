@@ -19,8 +19,8 @@ import {
 import { cn } from "@/lib/utils";
 
 export const puritySchema = z.object({
-  value: z.string().min(1, { message: "Purity is required" }),
-  // optionally add description or note
+  name: z.string().min(1, { message: "Purity name is required" }),
+  description: z.string().optional(),
 });
 
 export type PurityFormValues = z.infer<typeof puritySchema>;
@@ -28,7 +28,8 @@ export type PurityFormValues = z.infer<typeof puritySchema>;
 interface PurityFormProps extends React.HTMLAttributes<HTMLDivElement> {
   purity?: {
     id: number;
-    value: string;
+    name: string;
+    description?: string;
   };
   onSubmit: (data: PurityFormValues) => void;
   onCancel?: () => void;
@@ -44,7 +45,8 @@ export function PurityForm({
   const form = useForm<PurityFormValues>({
     resolver: zodResolver(puritySchema),
     defaultValues: {
-      value: purity?.value ?? "",
+      name: purity?.name ?? "",
+      description: purity?.description ?? "",
     },
   });
 
@@ -56,14 +58,28 @@ export function PurityForm({
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <FormField
             control={form.control}
-            name="value"
+            name="name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Purity Value</FormLabel>
+                <FormLabel>Name</FormLabel>
                 <FormControl>
                   <Input placeholder="e.g. 18K, 22K" {...field} />
                 </FormControl>
-                <FormDescription>The purity value</FormDescription>
+                <FormDescription>Name of the purity (e.g. 18K, 22K)</FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="description"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Description</FormLabel>
+                <FormControl>
+                  <Input placeholder="Description (optional)" {...field} />
+                </FormControl>
+                <FormDescription>Optional description for purity</FormDescription>
                 <FormMessage />
               </FormItem>
             )}

@@ -1,5 +1,5 @@
 "use client";
-
+// createMetalType
 import { useState, useEffect } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { metalTypesAPI } from "@/lib/services/Metal";  // you’ll need to create this
@@ -46,6 +46,7 @@ type Metal = {
 
 export default function MetalsPage() {
   const [metals, setMetals] = useState<Metal[]>([]);
+  const [purities, setPurities] = useState<{ id: number; name: string; description?: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingMetal, setEditingMetal] = useState<Metal | null>(null);
@@ -69,8 +70,20 @@ export default function MetalsPage() {
     }
   };
 
+  const loadPurities = async () => {
+    try {
+      const resp = await import("@/lib/services/Purities");
+      const puritiesAPI = resp.puritiesAPI;
+      const purityResp = await puritiesAPI.getPurities();
+      setPurities(purityResp.results || purityResp);
+    } catch (error) {
+      // Optionally handle error
+    }
+  };
+
   useEffect(() => {
     loadMetals();
+    loadPurities();
   }, []);
 
   const handleCreate = async (data: MetalFormValues) => {
@@ -210,7 +223,12 @@ export default function MetalsPage() {
               </DialogTitle>
             </DialogHeader>
             <MetalForm
-              metal={editingMetal ?? undefined}
+              metal={editingMetal ? {
+                ...editingMetal,
+                name: editingMetal.metal_name,
+                purity: purities.find(p => p.name === editingMetal.purity)?.id?.toString() || ""
+              } : undefined}
+              purities={purities}
               onSubmit={editingMetal ? handleUpdate : handleCreate}
               onCancel={() => {
                 setShowForm(false);

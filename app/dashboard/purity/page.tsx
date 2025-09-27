@@ -83,8 +83,8 @@ export default function PurityPage() {
 
   const columns: ColumnDef<Purity>[] = [
     {
-      accessorKey: "value",
-      header: "Purity Value",
+      accessorKey: "name",
+      header: "Purity Name",
       cell: ({ row }) => <span>{row.original.name}</span>,
     },
     {
@@ -143,7 +143,7 @@ export default function PurityPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <DataTable columns={columns} data={purities} searchKey="value" searchPlaceholder="Search purities..." />
+              <DataTable columns={columns} data={purities} searchKey="name" searchPlaceholder="Search purities..." />
             </CardContent>
           </Card>
         </div>
@@ -154,7 +154,7 @@ export default function PurityPage() {
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>{editingPurity ? "Edit Purity" : "Add Purity"}</DialogTitle></DialogHeader>
             <PurityForm
-              purity={editingPurity ?? undefined}
+              purity={editingPurity ? { ...editingPurity } : undefined}
               onSubmit={editingPurity ? handleUpdate : handleCreate}
               onCancel={() => {
                 setShowForm(false);

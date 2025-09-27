@@ -6,24 +6,29 @@ import { DashboardHeader } from "@/components/dashboard-header"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { NotificationForm, NotificationFormValues } from "@/components/notification-form"
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Trash2, Bell, Plus, Search } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 interface Notification {
-  id: number
-  title: string
-  message: string
-  type: string
-  createdAt: string
-  read: boolean
+  id: number;
+  customer: { id: string; name: string } | string;
+  title: string;
+  message: string;
+  type: string;
+  is_read?: boolean;
+  related_id?: string;
+  createdAt: string;
+  read: boolean;
 }
 
 export default function NotificationPage() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
-  const [form, setForm] = useState({ title: "", message: "", type: "info" })
+  const [customers, setCustomers] = useState<{ id: string; name: string }[]>([])
   const { toast } = useToast()
 
   useEffect(() => {
@@ -31,21 +36,48 @@ export default function NotificationPage() {
       try {
         // @ts-ignore
         const { notificationsAPI } = await import("@/lib/services/notifications")
-  const data = await notificationsAPI.getNotifications()
-  console.log('All Notifications:', data)
-  setNotifications(data)
+        const data = await notificationsAPI.getNotifications();
+        setNotifications(
+          data.map((n: any) => ({
+            ...n,
+            customer:
+              typeof n.customer === "object"
+                ? n.customer
+                : { id: n.customer, name: n.customer_name || n.customer || "Unknown" },
+          }))
+        );
       } catch (error) {
         toast({
           title: "Error",
           description: "Failed to load notifications",
           variant: "destructive",
-        })
+        });
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
-    fetchNotifications()
-  }, [toast])
+    };
+    const fetchCustomers = async () => {
+      try {
+        // @ts-ignore
+        const { customersAPI } = await import("@/lib/services/customers")
+        const data = await customersAPI.getCustomers();
+        setCustomers(
+          data.map((c: any) => ({
+            id: c.id,
+            name: c.name || c.full_name || c.email || c.username || String(c.id),
+          }))
+        );
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to load customers",
+          variant: "destructive",
+        });
+      }
+    };
+    fetchNotifications();
+    fetchCustomers();
+  }, [toast]);
 
   const handleDelete = async (id: number) => {
     try {
@@ -59,19 +91,29 @@ export default function NotificationPage() {
     }
   }
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleCreate = async (data: NotificationFormValues) => {
     try {
       // @ts-ignore
-      const { notificationsAPI } = await import("@/lib/api")
-      const newNotification = await notificationsAPI.createNotification(form)
-      setNotifications((prev) => [newNotification, ...prev])
-      setForm({ title: "", message: "", type: "info" })
-      toast({ title: "Created", description: "Notification sent" })
+      const { notificationsAPI } = await import("@/lib/services/notifications");
+      const newNotification = await notificationsAPI.createNotification({
+        ...data,
+        customer: data.customer,
+      });
+      setNotifications((prev) => [
+        {
+          ...newNotification,
+          customer:
+            typeof newNotification.customer === "object"
+              ? newNotification.customer
+              : { id: newNotification.customer, name: newNotification.customer_name || newNotification.customer || "Unknown" },
+        },
+        ...prev,
+      ]);
+      toast({ title: "Created", description: "Notification sent" });
     } catch {
-      toast({ title: "Error", description: "Failed to create notification", variant: "destructive" })
+      toast({ title: "Error", description: "Failed to create notification", variant: "destructive" });
     }
-  }
+  };
 
   const filteredNotifications = notifications.filter((n) =>
     n.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -138,43 +180,26 @@ export default function NotificationPage() {
             </Card>
           </div>
 
-          {/* Create Notification */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Create Notification</CardTitle>
-              <CardDescription>Send a new notification to users</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form className="flex flex-col gap-4 md:flex-row md:items-end" onSubmit={handleCreate}>
-                <Input
-                  placeholder="Title"
-                  value={form.title}
-                  onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  required
-                  className="md:w-1/4"
-                />
-                <Input
-                  placeholder="Message"
-                  value={form.message}
-                  onChange={(e) => setForm({ ...form, message: e.target.value })}
-                  required
-                  className="md:w-2/4"
-                />
-                <select
-                  value={form.type}
-                  onChange={(e) => setForm({ ...form, type: e.target.value })}
-                  className="border rounded px-2 py-2 md:w-1/6"
-                >
-                  <option value="info">Info</option>
-                  <option value="warning">Warning</option>
-                  <option value="error">Error</option>
-                </select>
-                <Button type="submit" className="md:w-1/6">
-                  <Plus className="h-4 w-4 mr-2" /> Send
+          {/* Create Notification Dialog */}
+          <div className="flex justify-end mb-4">
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="default">
+                  <Plus className="h-4 w-4 mr-2" /> Create Notification
                 </Button>
-              </form>
-            </CardContent>
-          </Card>
+              </DialogTrigger>
+              <DialogContent className="max-w-lg">
+                <DialogHeader>
+                  <DialogTitle>Create Notification</DialogTitle>
+                  <DialogDescription>Send a new notification to users</DialogDescription>
+                </DialogHeader>
+                <NotificationForm
+                  customers={customers}
+                  onSubmit={handleCreate}
+                />
+              </DialogContent>
+            </Dialog>
+          </div>
 
           {/* Notification List */}
           <Card>
@@ -221,7 +246,8 @@ export default function NotificationPage() {
                       </Button>
                     </div>
                   ))
-                )}
+                )
+              }
               </div>
             </CardContent>
           </Card>
@@ -230,3 +256,4 @@ export default function NotificationPage() {
     </DashboardLayout>
   )
 }
+

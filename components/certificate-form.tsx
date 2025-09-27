@@ -20,8 +20,8 @@ import { cn } from "@/lib/utils";
 
 export const certificateSchema = z.object({
   name: z.string().min(1, { message: "Name is required" }),
-  issuer: z.string().optional(),
-  // you can add more: issue_date, validity, etc.
+  description: z.string().optional(),
+  image: z.any().optional(),
 });
 
 export type CertificateFormValues = z.infer<typeof certificateSchema>;
@@ -30,7 +30,8 @@ interface CertificateFormProps extends React.HTMLAttributes<HTMLDivElement> {
   certificate?: {
     id: number;
     name: string;
-    issuer?: string;
+    description?: string;
+    image?: string;
   };
   onSubmit: (data: CertificateFormValues) => void;
   onCancel?: () => void;
@@ -43,11 +44,13 @@ export function CertificateForm({
   className,
   ...props
 }: CertificateFormProps) {
+  const [imageFile, setImageFile] = React.useState<File | null>(null);
   const form = useForm<CertificateFormValues>({
     resolver: zodResolver(certificateSchema),
     defaultValues: {
       name: certificate?.name ?? "",
-      issuer: certificate?.issuer ?? "",
+      description: certificate?.description ?? "",
+      image: certificate?.image ?? "",
     },
   });
 
@@ -56,17 +59,21 @@ export function CertificateForm({
   return (
     <div className={cn("space-y-4", className)} {...props}>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={form.handleSubmit((data) => {
+          onSubmit({
+            ...data,
+            image: imageFile || data.image || ""
+          });
+        })} className="space-y-6">
           <FormField
             control={form.control}
             name="name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Certificate Name</FormLabel>
+                <FormLabel>Name</FormLabel>
                 <FormControl>
                   <Input placeholder="Enter certificate name" {...field} />
                 </FormControl>
-                <FormDescription>Name of certificate (e.g. GIA, IGI)</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -74,18 +81,31 @@ export function CertificateForm({
 
           <FormField
             control={form.control}
-            name="issuer"
+            name="description"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Issuer</FormLabel>
+                <FormLabel>Description</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter issuer name (optional)" {...field} />
+                  <Input placeholder="Enter description" {...field} />
                 </FormControl>
-                <FormDescription>Optional: who issued this certificate</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
           />
+
+          <div>
+            <FormLabel>Image</FormLabel>
+            <Input
+              type="file"
+              accept="image/*"
+              onChange={e => setImageFile(e.target.files?.[0] ?? null)}
+            />
+            {imageFile && (
+              <div className="mt-2">
+                <img src={URL.createObjectURL(imageFile)} alt="Preview" className="h-24 rounded" />
+              </div>
+            )}
+          </div>
 
           <div className="flex justify-end gap-2">
             {onCancel && (

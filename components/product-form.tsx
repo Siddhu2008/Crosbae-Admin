@@ -35,10 +35,13 @@ import { hsncodesAPI } from "@/lib/services/HSN"
 const productSchema = z.object({
   name: z.string().min(1, "Product name is required"),
   sku: z.string().min(1, "SKU is required"),
+  sku_slug: z.string().min(1, "SKU slug is required"),
+  sku_product_id: z.string().min(1, "SKU ProductID is required"),
   category: z.string().min(1, "Category is required"),
   brand: z.string().optional(),
   description: z.string().min(1, "Description is required"),
   price: z.number().min(0, "Price must be positive"),
+  price_inclusive: z.boolean().optional(),
   quantity: z.number().min(0, "Quantity must be positive"),
   weight: z.number().min(0, "Weight must be positive"),
   making_charge: z.number().min(0, "Making charge must be positive"),
@@ -47,6 +50,12 @@ const productSchema = z.object({
   stoneType: z.string().min(1, "Stone type is required"),
   certification: z.string().min(1, "Certification is required"),
   hsn_code: z.string().min(1, "HSN code is required"),
+  tags: z.string().optional(),
+  size: z.string().optional(),
+  features: z.string().optional(),
+  rating_review: z.string().optional(),
+  reviews_count: z.number().optional(),
+  rating_histogram: z.string().optional(),
 })
 
 // Quick Add HSN Code Dialog
@@ -518,7 +527,7 @@ function QuickAddStoneTypeDialog({
       await onAdd({ stone_name: stoneName.trim(), image })
       setStoneName("")
       setImage(null)
-      setOpen(false)
+      setOpen(false)  
     } catch (error) {
       console.error("Failed to add stone type:", error)
     } finally {
@@ -673,10 +682,13 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
     defaultValues: {
       name: product?.name || "",
       sku: product?.sku || "",
+      sku_slug: product?.sku_slug || "",
+      sku_product_id: product?.sku_product_id || "",
       category: product?.category?.toString() || "",
       brand: product?.brand?.toString() || "",
       description: product?.description || "",
       price: product?.price || undefined,
+      price_inclusive: product?.price_inclusive || false,
       quantity: product?.quantity || undefined,
       weight: product?.weight || undefined,
       making_charge: product?.making_charge || undefined,
@@ -685,6 +697,12 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
       stoneType: product?.stoneType?.toString() || "",
       certification: product?.certification?.toString() || "",
       hsn_code: product?.hsn_code?.toString() || "",
+      tags: product?.tags || "",
+      size: product?.size || "",
+      features: product?.features || "",
+      rating_review: product?.rating_review || "",
+      reviews_count: product?.reviews_count || 0,
+      rating_histogram: product?.rating_histogram || "{}",
     },
   })
 
@@ -740,8 +758,11 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
       const formData = {
         ...data,
         tags: tags.join(","),
-        features: JSON.stringify({}),
-        size: JSON.stringify({}),
+        // features and size can be JSON or string
+        features: data.features || "null",
+        size: data.size || "null",
+        reviews_count: data.reviews_count || 0,
+        rating_histogram: data.rating_histogram || "{}",
       }
       await onSubmit(formData)
     } finally {
@@ -854,40 +875,68 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
                 />
 
                 <FormField
-  control={form.control}
-  name="category"
-  render={({ field }) => (
-    <FormItem>
-      <FormLabel>Category</FormLabel>
-      <div className="flex gap-2">
-        <Select onValueChange={field.onChange} defaultValue={field.value}>
-          <FormControl>
-            <SelectTrigger className="flex-1">
-              <SelectValue placeholder="Select category" />
-            </SelectTrigger>
-          </FormControl>
-          <SelectContent>
-            {categories.map((category: any) => (
-              <SelectItem key={category.id} value={category.id.toString()}>
-                {category.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <QuickAddCategoryDialog
-          categories={categories}
-          onAdd={async (data) => {
-            // You may need to adjust this API call to send all fields
-            const newCategory = await categoriesAPI.createCategory(data)
-            setCategories([...categories, newCategory])
-            form.setValue("category", newCategory.id.toString())
-          }}
-        />
-      </div>
-      <FormMessage />
-    </FormItem>
-  )}
-/>
+                  control={form.control}
+                  name="sku_slug"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>SKU Slug</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter SKU slug" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="sku_product_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>SKU ProductID</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter SKU ProductID" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Category</FormLabel>
+                      <div className="flex gap-2">
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="flex-1">
+                              <SelectValue placeholder="Select category" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {categories.map((category: any) => (
+                              <SelectItem key={category.id} value={category.id.toString()}>
+                                {category.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <QuickAddCategoryDialog
+                          categories={categories}
+                          onAdd={async (data) => {
+                            // You may need to adjust this API call to send all fields
+                            const newCategory = await categoriesAPI.createCategory(data)
+                            setCategories([...categories, newCategory])
+                            form.setValue("category", newCategory.id.toString())
+                          }}
+                        />
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 <FormField
                   control={form.control}
@@ -918,6 +967,90 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
                           }}
                         />
                       </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="size"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Size</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter size" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="features"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Features</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter features" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="rating_review"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Rating Review</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter rating review" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="reviews_count"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Reviews Count</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="0" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="rating_histogram"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Rating Histogram</FormLabel>
+                      <FormControl>
+                        <Input placeholder="{}" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="price_inclusive"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Price Inclusive</FormLabel>
+                      <FormControl>
+                        <input type="checkbox" checked={field.value} onChange={e => field.onChange(e.target.checked)} />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
