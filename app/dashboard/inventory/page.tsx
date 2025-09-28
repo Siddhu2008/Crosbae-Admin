@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useEffect } from "react"
@@ -533,7 +532,7 @@ export default function InventoryPage() {
             }
             className={status === "active" ? "bg-green-100 text-green-800 border-transparent" : undefined}
           >
-            {status.charAt(0).toUpperCase() + status.slice(1).replace("_", " ")}
+            {(status ?? "unknown").charAt(0).toUpperCase() + (status ?? "unknown").slice(1).replace("_", " ")}
           </Badge>
         )
       },

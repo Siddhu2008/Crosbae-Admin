@@ -118,7 +118,7 @@ export default function CustomersPage() {
       accessorKey: "total_spent",
       header: "Total Spent",
       cell: ({ row }) =>
-        `₹${row.original.total_spent.toLocaleString(undefined, {
+        `₹${(row.original.total_spent ?? 0).toLocaleString(undefined, {
           minimumFractionDigits: 0,
           maximumFractionDigits: 0,
         })}`,

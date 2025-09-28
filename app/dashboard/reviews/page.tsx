@@ -103,7 +103,8 @@ export default function ReviewsPage() {
       setReviews(reviewsData.results || []);
       setTestimonials(testimonialsData.results || []);
       // Debug: log all reviews and testimonials
-      
+      console.log("Loaded reviews:", reviewsData);
+      console.log("Loaded testimonials:", testimonialsData);
     } catch (error) {
       console.error("Failed to load data:", error);
       setReviews([]);

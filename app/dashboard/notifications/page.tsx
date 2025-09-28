@@ -37,8 +37,9 @@ export default function NotificationPage() {
       // @ts-ignore
       const { notificationsAPI } = await import("@/lib/services/notifications")
       const data = await notificationsAPI.getNotifications()
+      console.log("Fetched notifications:", data);
       setNotifications(
-        data.map((n: any) => ({
+        (data.results || []).map((n: any) => ({
           ...n,
           customer:
             typeof n.customer === "object"
