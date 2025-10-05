@@ -1021,7 +1021,15 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
                     <FormItem>
                       <FormLabel>Reviews Count</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="0" {...field} />
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          value={field.value ?? ""}
+                          onChange={e => {
+                            const val = e.target.value
+                            field.onChange(val === "" ? undefined : Number(val))
+                          }}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

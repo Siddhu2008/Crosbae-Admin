@@ -547,41 +547,14 @@ export default function InventoryPage() {
       cell: ({ row }) => {
         const product = row.original
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                className="h-8 w-8 p-0"
-                aria-label="Actions"
-                size="sm"
-              >
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" forceMount>
-              <DropdownMenuItem
-                onClick={() => {
-                  setEditingProduct(product)
-                  setShowForm(true)
-                }}
-              >
-                <Edit className="mr-2 h-4 w-4" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => handleDeleteProduct(product.id)}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => alert(`Viewing details for ${product.name}`)}
-              >
-                <Eye className="mr-2 h-4 w-4" />
-                View
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={() => { setEditingProduct(product); setShowForm(true); }}>
+              <Edit className="w-4 h-4" />
+            </Button>
+            <Button size="sm" variant="destructive" onClick={() => handleDeleteProduct(product.id)}>
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
         )
       },
     },
