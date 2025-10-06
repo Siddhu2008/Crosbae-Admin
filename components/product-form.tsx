@@ -1,5 +1,3 @@
-
-
 "use client"
 
 import { useState, useEffect } from "react"
@@ -35,7 +33,7 @@ import { hsncodesAPI } from "@/lib/services/HSN"
 const productSchema = z.object({
   name: z.string().min(1, "Product name is required"),
   sku: z.string().min(1, "SKU is required"),
-  sku_slug: z.string().min(1, "SKU slug is required"),
+  // Removed sku_slug
   sku_product_id: z.string().min(1, "SKU ProductID is required"),
   category: z.string().min(1, "Category is required"),
   brand: z.string().optional(),
@@ -52,10 +50,8 @@ const productSchema = z.object({
   hsn_code: z.string().min(1, "HSN code is required"),
   tags: z.string().optional(),
   size: z.string().optional(),
-  features: z.string().optional(),
-  rating_review: z.string().optional(),
-  reviews_count: z.number().optional(),
-  rating_histogram: z.string().optional(),
+  features: z.array(z.string()).optional(),
+  // Removed rating_review, reviews_count, rating_histogram
 })
 
 // Quick Add HSN Code Dialog
@@ -682,7 +678,6 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
     defaultValues: {
       name: product?.name || "",
       sku: product?.sku || "",
-      sku_slug: product?.sku_slug || "",
       sku_product_id: product?.sku_product_id || "",
       category: product?.category?.toString() || "",
       brand: product?.brand?.toString() || "",
@@ -699,10 +694,12 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
       hsn_code: product?.hsn_code?.toString() || "",
       tags: product?.tags || "",
       size: product?.size || "",
-      features: product?.features || "",
-      rating_review: product?.rating_review || "",
-      reviews_count: product?.reviews_count || 0,
-      rating_histogram: product?.rating_histogram || "{}",
+  features: Array.isArray(product?.features)
+  ? product.features
+  : typeof product?.features === "string" && product.features.length > 0
+    ? product.features.split(",")
+    : [],
+  // removed rating_review, reviews_count, rating_histogram
     },
   })
 
@@ -755,16 +752,25 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
   const handleSubmit = async (data: ProductFormData) => {
     setLoading(true)
     try {
+      if (!data.sku_product_id || !data.sku_product_id.trim()) {
+        alert("SKU ProductID is required.");
+        setLoading(false);
+        return;
+      }
       const formData = {
         ...data,
+        SKU_ProductID: data.sku_product_id.trim(),
         tags: tags.join(","),
-        // features and size can be JSON or string
-        features: data.features || "null",
+        features: Array.isArray(data.features) ? data.features : [],
+        hsn_code: !isNaN(Number(data.hsn_code)) ? String(data.hsn_code) : data.hsn_code,
         size: data.size || "null",
-        reviews_count: data.reviews_count || 0,
-        rating_histogram: data.rating_histogram || "{}",
       }
-      await onSubmit(formData)
+      // First, create/update the product
+      const result = await onSubmit(formData)
+      // If images exist and product was created, upload images to correct endpoint
+      if (images.length > 0 && result?.id) {
+        await inventoryAPI.uploadProductImages(result.id, images)
+      }
     } finally {
       setLoading(false)
     }
@@ -874,19 +880,7 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="sku_slug"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>SKU Slug</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter SKU slug" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {/* Removed SKU Slug field */}
 
                 <FormField
                   control={form.control}
@@ -993,62 +987,45 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
                     <FormItem>
                       <FormLabel>Features</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter features" {...field} />
+                        <div>
+                          <div className="flex flex-wrap gap-2 mb-2">
+                            {field.value?.map((feature: string, idx: number) => (
+                              <Badge key={idx} variant="secondary" className="flex items-center gap-1">
+                                {feature}
+                                <X className="w-3 h-3 cursor-pointer" onClick={() => field.onChange(field.value.filter((f: string) => f !== feature))} />
+                              </Badge>
+                            ))}
+                          </div>
+                          <Input
+                            placeholder="Add feature"
+                            value={newTag}
+                            onChange={e => setNewTag(e.target.value)}
+                            onKeyPress={e => {
+                              if (e.key === "Enter" && newTag.trim()) {
+                                e.preventDefault()
+                                if (!field.value.includes(newTag.trim())) {
+                                  field.onChange([...field.value, newTag.trim()])
+                                  setNewTag("")
+                                }
+                              }
+                            }}
+                          />
+                          <Button type="button" variant="outline" onClick={() => {
+                            if (newTag.trim() && !field.value.includes(newTag.trim())) {
+                              field.onChange([...field.value, newTag.trim()])
+                              setNewTag("")
+                            }
+                          }}>
+                            <Plus className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="rating_review"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Rating Review</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter rating review" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="reviews_count"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Reviews Count</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="0"
-                          value={field.value ?? ""}
-                          onChange={e => {
-                            const val = e.target.value
-                            field.onChange(val === "" ? undefined : Number(val))
-                          }}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="rating_histogram"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Rating Histogram</FormLabel>
-                      <FormControl>
-                        <Input placeholder="{}" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {/* Removed rating_review, reviews_count, rating_histogram fields */}
 
                 <FormField
                   control={form.control}
@@ -1310,43 +1287,42 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
             </div>
 
             {/* HSN Code */}
-           <FormField
-  control={form.control}
-  name="hsn_code"
-  render={({ field }) => (
-    <FormItem>
-      <FormLabel>HSN Code</FormLabel>
-      <div className="flex gap-2 items-center">
-        <Select
-          onValueChange={field.onChange} // ✅ returns string directly
-          defaultValue={field.value?.toString()}
-        >
-          <FormControl>
-            <SelectTrigger className="flex-1">
-              <SelectValue placeholder="Select HSN code" />
-            </SelectTrigger>
-          </FormControl>
-          <SelectContent>
-            {hsnCodes.map((hsn: any) => (
-              <SelectItem key={hsn.id} value={hsn.hsn_code.toString()}>
-                {hsn.hsn_code} - {hsn.description}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <QuickAddHSNCodeDialog
-          onAdd={async (data) => {
-            const newHSN = await hsncodesAPI.createHSNCode(data)
-            setHsnCodes([...hsnCodes, newHSN])
-            form.setValue("hsn_code", newHSN.hsn_code.toString()) // ✅ convert to string
-          }}
-        />
-      </div>
-      <FormMessage />
-    </FormItem>
-  )}
-/>
+            <FormField
+              control={form.control}
+              name="hsn_code"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>HSN Code</FormLabel>
+                  <div className="flex gap-2 items-center">
+                    <Select
+                      onValueChange={value => field.onChange(value)}
+                      defaultValue={field.value?.toString()}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="flex-1">
+                          <SelectValue placeholder="Select HSN code" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {hsnCodes.map((hsn: any) => (
+                          <SelectItem key={hsn.id} value={hsn.id.toString()}>
+                            {hsn.hsn_code} - {hsn.description}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <QuickAddHSNCodeDialog
+                      onAdd={async (data) => {
+                        const newHSN = await hsncodesAPI.createHSNCode(data)
+                        setHsnCodes([...hsnCodes, newHSN])
+                        form.setValue("hsn_code", newHSN.id.toString())
+                      }}
+                    />
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
 
 

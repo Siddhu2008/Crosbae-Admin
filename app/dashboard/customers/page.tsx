@@ -57,7 +57,7 @@ export default function CustomersPage() {
     setLoading(true)
     try {
       const response = await customersAPI.getCustomers()
-      console.log("Customers",response)
+    
       setCustomers(response.results || response)
     } catch (error) {
       console.error("Failed to load customers:", error)
@@ -73,11 +73,11 @@ export default function CustomersPage() {
 
   const columns: ColumnDef<Customer>[] = [
     {
-      accessorKey: "customer",
-      header: "Customer",
+      accessorKey: "first_name",
+      header: "Name",
       cell: ({ row }) => {
-        const customer = row.original
-        const initials = `${customer.first_name?.[0] || ""}${customer.last_name?.[0] || ""}`.toUpperCase()
+        const customer = row.original;
+        const initials = `${customer.first_name?.[0] || ""}${customer.last_name?.[0] || ""}`.toUpperCase();
         return (
           <div className="flex items-center space-x-3">
             <Avatar className="h-10 w-10">
@@ -91,7 +91,7 @@ export default function CustomersPage() {
               <div className="text-sm text-muted-foreground">{customer.email}</div>
             </div>
           </div>
-        )
+        );
       },
     },
     {
@@ -103,8 +103,8 @@ export default function CustomersPage() {
       accessorKey: "gender",
       header: "Gender",
       cell: ({ row }) => {
-        const gender = row.original.gender
-        return gender ? gender.charAt(0).toUpperCase() + gender.slice(1) : "N/A"
+        const gender = row.original.gender;
+        return gender ? gender.charAt(0).toUpperCase() + gender.slice(1) : "N/A";
       },
     },
     {
@@ -127,59 +127,70 @@ export default function CustomersPage() {
       accessorKey: "last_login",
       header: "Last Login",
       cell: ({ row }) => {
-        const lastLogin = row.original.last_login
+        const lastLogin = row.original.last_login;
         return lastLogin
           ? new Date(lastLogin).toLocaleDateString()
-          : "Never"
+          : "Never";
       },
     },
     {
       id: "actions",
+      header: "Actions",
       cell: ({ row }) => {
-        const customer = row.original
+        const customer = row.original;
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem>
-                <Eye className="mr-2 h-4 w-4" />
-                View Profile
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Mail className="mr-2 h-4 w-4" />
-                Send Email
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Phone className="mr-2 h-4 w-4" />
-                Call Customer
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                alert(`Edit customer: ${customer.email}`);
+                // Replace with your edit logic/dialog
+              }}
+              title="Edit"
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={async () => {
+                if (window.confirm(`Are you sure you want to delete ${customer.email}?`)) {
+                  try {
+                    await customersAPI.deleteCustomer(customer.id);
+                    loadCustomers();
+                  } catch (err) {
+                    alert("Failed to delete customer.");
+                  }
+                }
+              }}
+              title="Delete"
+            >
+              <UserX className="h-4 w-4" />
+            </Button>
+          </div>
+        );
       },
     },
-  ]
-
-  // Customer metrics
-  const totalCustomers = customers.length
+  ];
+  const totalCustomers = customers.length;
   const recentCustomers = customers.filter((c) => {
-    const lastLogin = c.last_login ? new Date(c.last_login) : null
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-    return lastLogin && lastLogin > thirtyDaysAgo
-  }).length
+    if (!c.last_login) return false;
+    const lastLoginDate = new Date(c.last_login);
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    return lastLoginDate >= thirtyDaysAgo;
+  }).length;
   const newCustomersThisMonth = customers.filter((c) => {
-    const createdDate = new Date(c.created_At)
-    const now = new Date()
+    if (!c.created_At) return false;
+    const createdDate = new Date(c.created_At);
+    const now = new Date();
     return (
       createdDate.getMonth() === now.getMonth() &&
       createdDate.getFullYear() === now.getFullYear()
-    )
-  }).length
-  const highValueCustomers = customers.filter((c) => c.total_spent > 50000).length
+    );
+  }).length;
+  const highValueCustomers = customers.filter((c) => c.total_spent > 50000).length;
 
   if (loading) {
     return (
@@ -195,83 +206,83 @@ export default function CustomersPage() {
   }
 
   return (
-    <DashboardLayout>
-      <div className="flex flex-col pt-15 md:pt-0">
-        <DashboardHeader
-          title="Customer Management"
-          description="Manage your customer base and relationships"
-        />
-
-        <div className="flex-1 p-4 md:p-6 space-y-6">
-          {/* Customer Metrics */}
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Customers</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{totalCustomers}</div>
-                <p className="text-xs text-muted-foreground">All time</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Recently Active</CardTitle>
-                <UserCheck className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{recentCustomers}</div>
-                <p className="text-xs text-muted-foreground">Last 30 days</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">New This Month</CardTitle>
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{newCustomersThisMonth}</div>
-                <p className="text-xs text-muted-foreground">September</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">High Value</CardTitle>
-                <UserX className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{highValueCustomers}</div>
-                <p className="text-xs text-muted-foreground">Spent over ₹50K</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Customer Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Customers</CardTitle>
-              <CardDescription>
-                View and manage your customer database
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-3">
-              <div className="overflow-auto">
-                <DataTable
-                  columns={columns}
-                  data={customers}
-                  searchKey="email"
-                  searchPlaceholder="Search customers..."
-                  className="min-w-[900px]"
-                />
+        <DashboardLayout>
+          <div className="flex flex-col pt-15 md:pt-0">
+            <DashboardHeader
+              title="Customer Management"
+              description="Manage your customer base and relationships"
+            />
+    
+            <div className="flex-1 p-4 md:p-6 space-y-6">
+              {/* Customer Metrics */}
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total Customers</CardTitle>
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{totalCustomers}</div>
+                    <p className="text-xs text-muted-foreground">All time</p>
+                  </CardContent>
+                </Card>
+    
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Recently Active</CardTitle>
+                    <UserCheck className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{recentCustomers}</div>
+                    <p className="text-xs text-muted-foreground">Last 30 days</p>
+                  </CardContent>
+                </Card>
+    
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">New This Month</CardTitle>
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{newCustomersThisMonth}</div>
+                    <p className="text-xs text-muted-foreground">September</p>
+                  </CardContent>
+                </Card>
+    
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">High Value</CardTitle>
+                    <UserX className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{highValueCustomers}</div>
+                    <p className="text-xs text-muted-foreground">Spent over ₹50K</p>
+                  </CardContent>
+                </Card>
               </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    </DashboardLayout>
-  )
-}
+    
+              {/* Customer Table */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Customers</CardTitle>
+                  <CardDescription>
+                    View and manage your customer database
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="p-3">
+                  <div className="overflow-auto">
+                    <DataTable
+                      columns={columns}
+                      data={customers}
+                      searchKey="email"
+                      searchPlaceholder="Search customers..."
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </DashboardLayout>
+      )
+    }
+    

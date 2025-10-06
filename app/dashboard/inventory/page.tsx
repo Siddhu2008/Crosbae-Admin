@@ -460,18 +460,27 @@ export default function InventoryPage() {
       accessorKey: "name",
       header: "Product Name",
       cell: ({ row }) => {
-        const product = row.original
+        const product = row.original;
+        // Show first image if available, else placeholder
+        const imageUrl = product.images && product.images.length > 0
+          ? product.images[0].url || product.images[0]
+          : "/placeholder.svg";
         return (
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center">
-              <Package className="w-5 h-5 text-muted-foreground" />
+            <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+              <img
+                src={imageUrl}
+                alt={product.name}
+                className="object-cover w-10 h-10 rounded-lg"
+                onError={e => { e.currentTarget.src = "/placeholder.svg"; }}
+              />
             </div>
             <div className="truncate">
               <div className="font-medium truncate">{product.name}</div>
               <div className="text-sm text-muted-foreground truncate">SKU: {product.sku}</div>
             </div>
           </div>
-        )
+        );
       },
     },
     {

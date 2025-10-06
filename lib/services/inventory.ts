@@ -1,4 +1,3 @@
-
 import api from "@/lib/api";
 
 // Inventory API
@@ -103,15 +102,26 @@ export const inventoryAPI = {
   },
 
   uploadProductImages: async (productId: number, files: File[]) => {
-    const formData = new FormData()
-    files.forEach((file) => {
-      formData.append("images", file)
-    })
-    const response = await api.post(`/v1/inventory/products/${productId}/upload-images/`, formData, {
+  const formData = new FormData();
+  files.forEach((file) => {
+    formData.append("image_file", file); // no []
+  });
+
+  const response = await api.post(
+    `/v1/inventory/products/${productId}/images/`,
+    formData,
+    {
       headers: {
         "Content-Type": "multipart/form-data",
       },
-    })
+    }
+  );
+
+  return response.data;
+},
+
+  getProductImages: async (productId: number) => {
+    const response = await api.get(`/v1/inventory/products/${productId}/images/`)
     return response.data
   },
 }

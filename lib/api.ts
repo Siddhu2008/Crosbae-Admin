@@ -46,7 +46,7 @@ api.interceptors.request.use(
     const token = getToken()
     if (token) {
       if (!config.headers) {
-        config.headers = {}
+        config.headers = {} as import("axios").AxiosRequestHeaders
       }
       config.headers.Authorization = `Bearer ${token}`
     }
