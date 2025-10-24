@@ -156,87 +156,87 @@ export default function InventoryPage() {
       toast({ title: "Error", description: error?.response?.data?.detail || "Failed to delete metal type", variant: "destructive" })
     }
   }
-        {/* Metal Types Section */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Metal Types</CardTitle>
-            <Button onClick={() => { setEditingMetal(null); setShowMetalForm(true) }}>
-              <Plus className="mr-2 h-4 w-4" /> Add Metal Type
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead>
-                  <tr>
-                    <th className="px-4 py-2 text-left">Name</th>
-                    <th className="px-4 py-2 text-left">Purity</th>
-                    <th className="px-4 py-2 text-left">Created At</th>
-                    <th className="px-4 py-2 text-left">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {metalTypes.map((metal) => (
-                    <tr key={metal.id} className="border-b">
-                      <td className="px-4 py-2">{metal.metal_name}</td>
-                      <td className="px-4 py-2">{purities.find(p => p.id === metal.purity)?.name || metal.purity}</td>
-                      <td className="px-4 py-2">{new Date(metal.created_at).toLocaleDateString()}</td>
-                      <td className="px-4 py-2">
-                        <Button size="sm" variant="outline" onClick={() => { setEditingMetal(metal); setShowMetalForm(true) }}><Edit className="w-4 h-4" /></Button>
-                        <Button size="sm" variant="destructive" className="ml-2" onClick={() => handleDeleteMetal(metal.id)}><Trash2 className="w-4 h-4" /></Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+  {/* Metal Types Section */ }
+  <Card>
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <CardTitle className="text-sm font-medium">Metal Types</CardTitle>
+      <Button onClick={() => { setEditingMetal(null); setShowMetalForm(true) }}>
+        <Plus className="mr-2 h-4 w-4" /> Add Metal Type
+      </Button>
+    </CardHeader>
+    <CardContent>
+      <div className="overflow-x-auto">
+        <table className="min-w-full text-sm">
+          <thead>
+            <tr>
+              <th className="px-4 py-2 text-left">Name</th>
+              <th className="px-4 py-2 text-left">Purity</th>
+              <th className="px-4 py-2 text-left">Created At</th>
+              <th className="px-4 py-2 text-left">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {metalTypes.map((metal) => (
+              <tr key={metal.id} className="border-b">
+                <td className="px-4 py-2">{metal.metal_name}</td>
+                <td className="px-4 py-2">{purities.find(p => p.id === metal.purity)?.name || metal.purity}</td>
+                <td className="px-4 py-2">{new Date(metal.created_at).toLocaleDateString()}</td>
+                <td className="px-4 py-2">
+                  <Button size="sm" variant="outline" onClick={() => { setEditingMetal(metal); setShowMetalForm(true) }}><Edit className="w-4 h-4" /></Button>
+                  <Button size="sm" variant="destructive" className="ml-2" onClick={() => handleDeleteMetal(metal.id)}><Trash2 className="w-4 h-4" /></Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </CardContent>
+  </Card>
 
-        {/* Metal Type Add/Edit Dialog */}
-        <Dialog open={showMetalForm} onOpenChange={setShowMetalForm}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>{editingMetal ? "Edit Metal Type" : "Add Metal Type"}</DialogTitle>
-            </DialogHeader>
-            <form
-              onSubmit={e => {
-                e.preventDefault();
-                const form = e.target as HTMLFormElement;
-                const metal_name = (form.elements.namedItem("metal_name") as HTMLInputElement).value;
-                const purity = Number((form.elements.namedItem("purity") as HTMLSelectElement).value);
-                if (editingMetal) {
-                  handleUpdateMetal({ metal_name, purity });
-                } else {
-                  handleCreateMetal({ metal_name, purity });
-                }
-              }}
-              className="space-y-4"
-            >
-              <div>
-                <Label htmlFor="metal_name">Metal Name</Label>
-                <Input id="metal_name" name="metal_name" defaultValue={editingMetal?.metal_name || ""} required />
-              </div>
-              <div>
-                <Label htmlFor="purity">Purity</Label>
-                <Select name="purity" defaultValue={editingMetal?.purity?.toString() || ""} required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select purity" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {purities.map((p) => (
-                      <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => { setShowMetalForm(false); setEditingMetal(null) }}>Cancel</Button>
-                <Button type="submit">{editingMetal ? "Update" : "Add"}</Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+  {/* Metal Type Add/Edit Dialog */ }
+  <Dialog open={showMetalForm} onOpenChange={setShowMetalForm}>
+    <DialogContent className="max-w-md">
+      <DialogHeader>
+        <DialogTitle>{editingMetal ? "Edit Metal Type" : "Add Metal Type"}</DialogTitle>
+      </DialogHeader>
+      <form
+        onSubmit={e => {
+          e.preventDefault();
+          const form = e.target as HTMLFormElement;
+          const metal_name = (form.elements.namedItem("metal_name") as HTMLInputElement).value;
+          const purity = Number((form.elements.namedItem("purity") as HTMLSelectElement).value);
+          if (editingMetal) {
+            handleUpdateMetal({ metal_name, purity });
+          } else {
+            handleCreateMetal({ metal_name, purity });
+          }
+        }}
+        className="space-y-4"
+      >
+        <div>
+          <Label htmlFor="metal_name">Metal Name</Label>
+          <Input id="metal_name" name="metal_name" defaultValue={editingMetal?.metal_name || ""} required />
+        </div>
+        <div>
+          <Label htmlFor="purity">Purity</Label>
+          <Select name="purity" defaultValue={editingMetal?.purity?.toString() || ""} required>
+            <SelectTrigger>
+              <SelectValue placeholder="Select purity" />
+            </SelectTrigger>
+            <SelectContent>
+              {purities.map((p) => (
+                <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="outline" onClick={() => { setShowMetalForm(false); setEditingMetal(null) }}>Cancel</Button>
+          <Button type="submit">{editingMetal ? "Update" : "Add"}</Button>
+        </div>
+      </form>
+    </DialogContent>
+  </Dialog>
   const { toast } = useToast()
   const [products, setProducts] = useState<Product[]>([])
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
@@ -284,7 +284,7 @@ export default function InventoryPage() {
     } finally {
       setLoading(false);
     }
-  }  
+  }
 
   const loadFilterData = async () => {
     try {
@@ -297,7 +297,7 @@ export default function InventoryPage() {
     } catch (error) {
       console.error("Failed to load filter data:", error);
     }
-  }  
+  }
 
   const applyFilters = () => {
     let filtered = [...products]
@@ -372,7 +372,7 @@ export default function InventoryPage() {
         variant: "destructive",
       });
     }
-  }  
+  }
 
   const handleUpdateProduct = async (data: any) => {
     if (!editingProduct) return;
@@ -393,7 +393,7 @@ export default function InventoryPage() {
         variant: "destructive",
       });
     }
-  }  
+  }
 
   const handleDeleteProduct = async (id: number) => {
     if (!confirm("Are you sure you want to delete this product?")) return;
@@ -412,7 +412,7 @@ export default function InventoryPage() {
         variant: "destructive",
       });
     }
-  }  
+  }
 
   const handleBulkUpload = async () => {
     if (!bulkFile) return
@@ -464,11 +464,11 @@ export default function InventoryPage() {
         const product = row.original;
         // Show first image if available, else placeholder
         // Get the first image if available, otherwise use placeholder
-  const imageUrl = product.images?.[0]
-  ? typeof product.images[0] === "string"
-    ? product.images[0] // it's a string URL
-    : product.images[0].url_full || product.images[0].url || "/placeholder.svg" // object with URL
-  : "/placeholder.svg";
+        const imageUrl = product.images?.[0]
+          ? typeof product.images[0] === "string"
+            ? product.images[0] // it's a string URL
+            : product.images[0].url_full || product.images[0].url || "/placeholder.svg" // object with URL
+          : "/placeholder.svg";
 
         return (
           <div className="flex items-center space-x-3">
@@ -491,12 +491,12 @@ export default function InventoryPage() {
     {
       accessorKey: "category",
       header: "Category",
-      cell: ({ row }) => row.original.category.name,
+      cell: ({ row }) => row.original.category,
     },
     {
       accessorKey: "brand",
       header: "Brand",
-      cell: ({ row }) => row.original.brand?.name || "N/A",
+      cell: ({ row }) => row.original.brand || "N/A",
     },
     {
       accessorKey: "price",
@@ -516,13 +516,12 @@ export default function InventoryPage() {
         return (
           <div className="flex items-center space-x-2">
             <span
-              className={`px-2 py-0.5 rounded text-xs font-medium ${
-                quantity === 0
+              className={`px-2 py-0.5 rounded text-xs font-medium ${quantity === 0
                   ? "bg-red-100 text-red-800"
                   : quantity <= 5
-                  ? "bg-yellow-100 text-yellow-800"
-                  : "bg-green-100 text-green-800"
-              }`}
+                    ? "bg-yellow-100 text-yellow-800"
+                    : "bg-green-100 text-green-800"
+                }`}
             >
               {quantity}
             </span>
@@ -541,8 +540,8 @@ export default function InventoryPage() {
               status === "active"
                 ? "default"
                 : status === "inactive"
-                ? "secondary"
-                : "destructive"
+                  ? "secondary"
+                  : "destructive"
             }
             className={status === "active" ? "bg-green-100 text-green-800 border-transparent" : undefined}
           >
