@@ -2,6 +2,7 @@
 import axios, { type AxiosInstance, type AxiosResponse, type AxiosError } from "axios"
 
 const API_BASE_URL = "https://api.crosbae.com/api"
+// const API_BASE_URL = "http://127.0.0.1:8000/api"
 
 // Create axios instance
 const api: AxiosInstance = axios.create({

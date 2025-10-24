@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useEffect } from "react"
@@ -462,9 +463,13 @@ export default function InventoryPage() {
       cell: ({ row }) => {
         const product = row.original;
         // Show first image if available, else placeholder
-        const imageUrl = product.images && product.images.length > 0
-          ? product.images[0].url || product.images[0]
-          : "/placeholder.svg";
+        // Get the first image if available, otherwise use placeholder
+  const imageUrl = product.images?.[0]
+  ? typeof product.images[0] === "string"
+    ? product.images[0] // it's a string URL
+    : product.images[0].url_full || product.images[0].url || "/placeholder.svg" // object with URL
+  : "/placeholder.svg";
+
         return (
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center overflow-hidden">

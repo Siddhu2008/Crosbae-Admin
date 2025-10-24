@@ -1,4 +1,5 @@
 import api from "@/lib/api";
+import { headers } from "next/headers";
 
 // Inventory API
 export const inventoryAPI = {
@@ -13,12 +14,18 @@ export const inventoryAPI = {
   },
 
   createProduct: async (data: any) => {
-    const response = await api.post("/v1/inventory/products/", data)
+    const response = await api.post("/v1/inventory/products/", data,{
+      headers:{ 
+        "Content-Type": "multipart/form-data",}
+    })
     return response.data
   },
 
   updateProduct: async (id: number, data: any) => {
-    const response = await api.put(`/v1/inventory/products/${id}/`, data)
+    const response = await api.put(`/v1/inventory/products/${id}/`,data,{
+      headers:{ 
+        "Content-Type": "multipart/form-data",}
+    })
     return response.data
   },
 

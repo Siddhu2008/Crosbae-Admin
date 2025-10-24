@@ -64,29 +64,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const login = async (username: string, password: string) => {
-    try {
-      const response = await authAPI.login(username, password)
-      localStorage.setItem("access_token", response.access)
-      localStorage.setItem("refresh_token", response.refresh)
+  try {
+    const response = await authAPI.login(username, password)
+    localStorage.setItem("access_token", response.access)
+    localStorage.setItem("refresh_token", response.refresh)
 
-      const userData = await authAPI.getCurrentUser()
+    const userData = response.user_data  // ✅ use directly
 
-      if (!userData.is_staff && !userData.is_superuser) {
-        throw new Error("Access denied. Admin privileges required.")
-      }
-
-      setAuthState({
-        user_data: userData,
-        isLoading: false,
-        isAuthenticated: true,
-      })
-
-      router.push("/dashboard")
-    } catch (error: any) {
-      console.error("Login failed:", error)
-      throw error
+    if (!(userData.is_staff ?? userData.isStaff)) {
+      throw new Error("Access denied. Admin privileges required.")
     }
+
+    setAuthState({
+      user_data: userData,
+      isLoading: false,
+      isAuthenticated: true,
+    })
+
+    router.push("/dashboard")
+  } catch (error: any) {
+    console.error("Login failed:", error)
+    throw error
   }
+}
+
 
   const logout = useCallback(() => {
     localStorage.removeItem("access_token")
