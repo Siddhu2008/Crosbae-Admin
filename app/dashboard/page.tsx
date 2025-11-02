@@ -21,6 +21,10 @@ import {
   Eye,
 } from "lucide-react"
 import { dashboardAPI } from "@/lib/services/Dashboard"
+import { customersAPI } from "@/lib/services/customers"
+import { productsAPI } from "@/lib/services/Product"
+import { ordersAPI } from "@/lib/services/orders"
+import { paymentsAPI } from "@/lib/services/payments"
 import {
   LineChart,
   Line,
@@ -65,24 +69,46 @@ export default function DashboardPage() {
   useEffect(() => {
     const loadDashboardData = async () => {
       try {
-        const [metricsData, salesChartData, topProductsData, recentActivityData] = await Promise.all([
-          dashboardAPI.getMetrics(),
-          dashboardAPI.getSalesChart("30d"),
-          dashboardAPI.getTopProducts(),
-          dashboardAPI.getRecentActivity ? dashboardAPI.getRecentActivity() : Promise.resolve([]),
-        ])
-        setMetrics(metricsData)
-        setSalesData(salesChartData)
-        setTopProducts(topProductsData)
-        setRecentActivity(recentActivityData)
+        const [metricsData, salesChartData, topProductsData, recentActivityData, customers, products, orders, payments] =
+          await Promise.all([
+            dashboardAPI.getMetrics(),
+            dashboardAPI.getSalesChart("30d"),
+            dashboardAPI.getTopProducts(),
+            dashboardAPI.getRecentActivity ? dashboardAPI.getRecentActivity() : Promise.resolve([]),
+            customersAPI.getCustomers(), // fetch all customers
+             productsAPI.getProducts(),
+          ordersAPI.getOrders(),
+          paymentsAPI.getPayments(),
+          ]);
+
+           // Calculate total revenue from payments
+        const totalRevenue = payments.reduce(
+          (sum: number, payment: any) => sum + payment.amount,
+          0
+        )
+        setMetrics({
+          ...metricsData,
+           totalRevenue,
+          totalOrders: orders.length,
+          activeCustomers: customers.length,
+          totalProducts: products.length,
+          revenueChange: "0%", // You can calculate this if you have previous data
+          ordersChange: "0%",
+          customersChange: "0%",
+          productsChange: "0%",
+        });
+        setSalesData(salesChartData);
+        setTopProducts(topProductsData);
+        setRecentActivity(recentActivityData);
       } catch (error) {
-        console.error("Failed to load dashboard data:", error)
+        console.error("Failed to load dashboard data:", error);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
-    loadDashboardData()
-  }, [])
+    };
+
+    loadDashboardData();
+  }, []);
 
   if (loading) {
     return (
@@ -108,7 +134,7 @@ export default function DashboardPage() {
         <main className="flex-1 p-4 sm:p-6 space-y-6">
           {/* Metrics Cards: stacked on mobile, grid on larger screens */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
-            <MetricCard
+             <MetricCard
               title="Total Revenue"
               value={`$${metrics?.totalRevenue.toLocaleString()}`}
               change={metrics?.revenueChange}
@@ -250,10 +276,10 @@ export default function DashboardPage() {
                           activity.status === "completed"
                             ? "default"
                             : activity.status === "pending"
-                            ? "secondary"
-                            : activity.status === "warning"
-                            ? "destructive"
-                            : "outline"
+                              ? "secondary"
+                              : activity.status === "warning"
+                                ? "destructive"
+                                : "outline"
                         }
                         className="mt-2 sm:mt-0"
                       >

@@ -105,7 +105,7 @@ export default function CategoriesPage() {
       loadCategories();
     } catch (err: any) {
       console.error(err);
-      toast({
+      toast({ 
         title: "Error",
         description: err?.response?.data?.detail ?? "Operation failed",
         variant: "destructive",

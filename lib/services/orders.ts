@@ -13,7 +13,7 @@ export const ordersAPI = {
   },
 
   updateOrderStatus: async (uuid: string, status: string) => {
-    const response = await api.patch(`/orders/${uuid}/`, { status })
+    const response = await api.put(`/orders/${uuid}/`, { status })
     return response.data
   },
 }

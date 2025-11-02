@@ -68,21 +68,21 @@ export default function OrdersPage() {
   }, [statusFilter])
 
   const loadOrders = async () => {
-  try {
-    const params = statusFilter !== "all" ? { status: statusFilter } : {};
-    const response = await ordersAPI.getOrders(params);
-    
-    // 👇 Log the entire response for debugging
-    console.log("Fetched Orders:", response);
-    
-    setOrders(response.results || response);
-  } catch (error) {
-    console.error("Failed to load orders:", error);
-    setOrders([]);
-  } finally {
-    setLoading(false);
+    try {
+      const params = statusFilter !== "all" ? { status: statusFilter } : {};
+      const response = await ordersAPI.getOrders(params);
+
+      // 👇 Log the entire response for debugging
+      console.log("Fetched Orders:", response);
+
+      setOrders(response.results || response);
+    } catch (error) {
+      console.error("Failed to load orders:", error);
+      setOrders([]);
+    } finally {
+      setLoading(false);
+    }
   }
-}
 
   const handleStatusUpdate = async (orderId: string, newStatus: string) => {
     try {
@@ -99,7 +99,7 @@ export default function OrdersPage() {
         variant: "destructive",
       });
     }
-  }  
+  }
 
   const columns: ColumnDef<Order>[] = [
     {
@@ -178,42 +178,22 @@ export default function OrdersPage() {
     {
       id: "actions",
       cell: ({ row }) => {
-        const order = row.original
+        const order = row.original;
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setSelectedOrderId(order.uuid)}>
-                <Eye className="mr-2 h-4 w-4" />
-                View Details
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => handleStatusUpdate(order.uuid, "processing")}
-              >
-                <Clock className="mr-2 h-4 w-4" />
-                Mark Processing
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => handleStatusUpdate(order.uuid, "shipped")}
-              >
-                <Truck className="mr-2 h-4 w-4" />
-                Mark Shipped
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => handleStatusUpdate(order.uuid, "delivered")}
-              >
-                <Package className="mr-2 h-4 w-4" />
-                Mark Delivered
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )
+          <div className="relative">
+            {/* Replaced DropdownMenu with a simple edit button */}
+            <Button
+              variant="ghost"
+              className="h-8 w-8 p-0"
+              onClick={() => setSelectedOrderId(order.uuid)} // Opens the dialog
+            >
+              <Eye className="h-4 w-4" /> {/* You can replace Eye with Edit icon */}
+            </Button>
+          </div>
+        );
       },
-    },
+    }
+
   ]
 
   // Calculate metrics
@@ -334,6 +314,7 @@ export default function OrdersPage() {
           onOpenChange={(open) => !open && setSelectedOrderId(null)}
           onStatusUpdate={loadOrders}
         />
+
       </div>
     </DashboardLayout>
   )
