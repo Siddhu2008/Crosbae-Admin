@@ -82,6 +82,7 @@ interface Product {
   id: number
   name: string
   sku: string
+  images?: any[]
   category: { id: number; name: string }
   brand?: { id: number; name: string }
   price: number
@@ -419,21 +420,27 @@ export default function InventoryPage() {
 
     setBulkUploading(true)
     try {
-      await inventoryAPI.bulkUploadProducts(bulkFile)
-      toast({
-        title: "Success",
-        description: "Products uploaded successfully",
-      })
+      // Basic client-side validation for file type
+      const allowed = [".csv", ".xlsx", ".xls"]
+      const name = bulkFile.name.toLowerCase()
+      if (!allowed.some((ext) => name.endsWith(ext))) {
+        throw new Error("Unsupported file type. Please upload a CSV or Excel file.")
+      }
+
+      // Call API with the File; inventoryAPI will wrap in FormData
+      const res = await inventoryAPI.bulkUploadProducts(bulkFile)
+      toast({ title: "Success", description: res?.detail || "Products uploaded successfully" })
       setShowBulkUpload(false)
       setBulkFile(null)
-      loadProducts()
+      // If backend returns a summary, use it; otherwise reload list
+      if (res && (res.uploaded_count || res.processed || res.summary)) {
+        console.info("Bulk upload result:", res)
+      }
+      await loadProducts()
     } catch (error: any) {
       console.error("Bulk upload error:", error)
-      toast({
-        title: "Error",
-        description: error.response?.data?.detail || "Failed to upload products",
-        variant: "destructive",
-      })
+      const msg = error?.response?.data?.detail || error?.message || "Failed to upload products"
+      toast({ title: "Error", description: msg, variant: "destructive" })
     } finally {
       setBulkUploading(false)
     }
@@ -462,6 +469,7 @@ export default function InventoryPage() {
       header: "Product Name",
       cell: ({ row }) => {
         const product = row.original;
+        console.log("Rendering product:", product);
         // Show first image if available, else placeholder
         // Get the first image if available, otherwise use placeholder
         const imageUrl = product.images?.[0]

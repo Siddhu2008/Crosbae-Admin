@@ -4,9 +4,10 @@ import { cn } from "@/lib/utils"
 interface OrderStatusBadgeProps {
   status: string
   className?: string
+  label?: string
 }
 
-export function OrderStatusBadge({ status, className }: OrderStatusBadgeProps) {
+export function OrderStatusBadge({ status, className, label }: OrderStatusBadgeProps) {
   const getStatusConfig = (status: string) => {
     switch (status.toLowerCase()) {
       case "pending":
@@ -37,7 +38,7 @@ export function OrderStatusBadge({ status, className }: OrderStatusBadgeProps) {
         className
       )}
     >
-      {status.charAt(0).toUpperCase() + status.slice(1)}
+      {label ?? (status.charAt(0).toUpperCase() + status.slice(1))}
     </Badge>
   )
 }

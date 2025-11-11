@@ -222,7 +222,8 @@ type ProductFormData = z.infer<typeof productSchema>
 
 interface ProductFormProps {
   product?: any
-  onSubmit: (data: ProductFormData) => Promise<void>
+  // onSubmit returns created/updated product (so callers can upload images using result.id)
+  onSubmit: (data: ProductFormData) => Promise<any>
   onCancel: () => void
 }
 
@@ -989,10 +990,10 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
                       <FormControl>
                         <div>
                           <div className="flex flex-wrap gap-2 mb-2">
-                            {field.value?.map((feature: string, idx: number) => (
+                            {(field.value || []).map((feature: string, idx: number) => (
                               <Badge key={idx} variant="secondary" className="flex items-center gap-1">
                                 {feature}
-                                <X className="w-3 h-3 cursor-pointer" onClick={() => field.onChange(field.value.filter((f: string) => f !== feature))} />
+                                <X className="w-3 h-3 cursor-pointer" onClick={() => field.onChange((field.value || []).filter((f: string) => f !== feature))} />
                               </Badge>
                             ))}
                           </div>
@@ -1003,16 +1004,16 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
                             onKeyPress={e => {
                               if (e.key === "Enter" && newTag.trim()) {
                                 e.preventDefault()
-                                if (!field.value.includes(newTag.trim())) {
-                                  field.onChange([...field.value, newTag.trim()])
+                                if (!((field.value || []) as string[]).includes(newTag.trim())) {
+                                  field.onChange([...(field.value || []), newTag.trim()])
                                   setNewTag("")
                                 }
                               }
                             }}
                           />
                           <Button type="button" variant="outline" onClick={() => {
-                            if (newTag.trim() && !field.value.includes(newTag.trim())) {
-                              field.onChange([...field.value, newTag.trim()])
+                            if (newTag.trim() && !((field.value || []) as string[]).includes(newTag.trim())) {
+                              field.onChange([...(field.value || []), newTag.trim()])
                               setNewTag("")
                             }
                           }}>

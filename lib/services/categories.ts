@@ -5,7 +5,8 @@ import api from "@/lib/api";
 
 type CategoryCreatePayload = {
   name: string;
-  parent?: number;
+  // parent can be either a numeric id or string (some callers pass string ids)
+  parent?: number | string;
   image_file?: File | null;
 };
 
@@ -34,9 +35,8 @@ export const categoriesAPI = {
             return fd;
           })();
 
-    const response = await api.post("/v1/inventory/categories/", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+    // Let the browser set the multipart Content-Type (boundary)
+    const response = await api.post("/v1/inventory/categories/", formData);
     return response.data;
   },
 
@@ -55,10 +55,8 @@ export const categoriesAPI = {
             return fd;
           })();
 
-    const response = await api.patch(
-      `/v1/inventory/categories/${slug}/`,formData,{
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+    // Let the browser set the multipart Content-Type (boundary)
+    const response = await api.patch(`/v1/inventory/categories/${slug}/`, formData);
     return response.data;
   },
 

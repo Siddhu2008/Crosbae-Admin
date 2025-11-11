@@ -14,18 +14,12 @@ export const inventoryAPI = {
   },
 
   createProduct: async (data: any) => {
-    const response = await api.post("/v1/inventory/products/", data,{
-      headers:{ 
-        "Content-Type": "multipart/form-data",}
-    })
+    const response = await api.post("/v1/inventory/products/", data)
     return response.data
   },
 
   updateProduct: async (id: number, data: any) => {
-    const response = await api.put(`/v1/inventory/products/${id}/`,data,{
-      headers:{ 
-        "Content-Type": "multipart/form-data",}
-    })
+    const response = await api.put(`/v1/inventory/products/${id}/`,data)
     return response.data
   },
 
@@ -34,15 +28,18 @@ export const inventoryAPI = {
     return response.data
   },
 
-  bulkUploadProducts: async (file: File) => {
-    const formData = new FormData()
-    formData.append("file", file)
-    const response = await api.post("/v1/inventory/products/bulk-upload/", formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    })
-    return response.data
+  bulkUploadProducts: async (fileOrForm: File | FormData) => {
+    try {
+      const formData = fileOrForm instanceof FormData ? fileOrForm : new FormData()
+      if (!(fileOrForm instanceof FormData)) formData.append("file", fileOrForm)
+
+      // Let the browser set the Content-Type (including boundary)
+      const response = await api.post("/v1/inventory/products/bulk-upload/", formData)
+      return response.data
+    } catch (err) {
+      // rethrow so callers can surface the error message
+      throw err
+    }
   },
 
   exportProducts: async (params?: Record<string, any>) => {
@@ -109,33 +106,14 @@ export const inventoryAPI = {
   },
 
   uploadProductImages: async (productId: number, files: File[]) => {
-  const formData = new FormData();
-    // append the same field name repeatedly (many backends accept this)
+    const formData = new FormData();
     files.forEach((file) => {
-      formData.append("image_file", file);
-  });
+      formData.append("image_file[]", file);
+    });
 
-    try {
-      // Do not set Content-Type explicitly so the browser/axios can add the correct boundary
-      const response = await api.post(`/v1/inventory/products/${productId}/images/`, formData)
-      return response.data
-    } catch (err: any) {
-      // If batch upload fails, try uploading files one-by-one as a fallback
-      try {
-        const results: any[] = []
-        for (const file of files) {
-          const fd = new FormData()
-          fd.append("image_file", file)
-          const r = await api.post(`/v1/inventory/products/${productId}/images/`, fd)
-          results.push(r.data)
-        }
-        return results
-      } catch (err2) {
-        // rethrow the original error if fallback also fails
-        throw err
-      }
-    }
-
+    // Let the browser set Content-Type with proper multipart boundary
+    const response = await api.post(`/v1/inventory/products/${productId}/images/`, formData)
+    return response.data
   },
 
   getProductImages: async (productId: number) => {

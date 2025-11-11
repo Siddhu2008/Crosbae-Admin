@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { DashboardHeader } from "@/components/dashboard-header"
@@ -22,6 +22,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,44 +40,71 @@ import {
   Filter,
 } from "lucide-react"
 import { ordersAPI } from "@/lib/services/orders";
+import { customersAPI } from "@/lib/services/customers";
 import { useToast } from "@/hooks/use-toast"
 
 interface Order {
   uuid: string
-  customer: {
+  // customer can be either an id (number) or an object with details
+  customer: number | {
     id: number
     email: string
     first_name?: string
     last_name?: string
   }
   status: string
+  status_display?: string
   order_on: string
   last_update: string
+  subtotal?: number
   total: number
-  shipping_charge: number
-  items_count: number
+  shipping_charge?: string | number
+  items_count?: number
+  shipping_address?: { id: number; title?: string }
 }
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
+  const [customersMap, setCustomersMap] = useState<Record<number, string>>({})
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
-  const [statusFilter, setStatusFilter] = useState<string>("all")
+  const [filters, setFilters] = useState({ status: "all", dateRange: "all", customer: "" })
   const { toast } = useToast()
 
   useEffect(() => {
+    // Load customers once and orders when filters change
+    loadCustomers()
     loadOrders()
-  }, [statusFilter])
+  }, [filters])
+
+  const loadCustomers = async () => {
+    try {
+      const data = await customersAPI.getCustomers()
+      const list = Array.isArray(data) ? data : data.results || data
+      const map: Record<number, string> = {}
+      list.forEach((c: any) => {
+        const name = c.first_name || c.name || `${c.first_name ?? ""} ${c.last_name ?? ""}`.trim() || c.email || `#${c.id}`
+        map[c.id] = name
+      })
+      setCustomersMap(map)
+    } catch (error) {
+      console.warn("Failed to load customers for orders page", error)
+    }
+  }
 
   const loadOrders = async () => {
     try {
-      const params = statusFilter !== "all" ? { status: statusFilter } : {};
-      const response = await ordersAPI.getOrders(params);
+      const params: Record<string, any> = {}
+      if (filters.status && filters.status !== "all") params.status = filters.status
+      // dateRange can be mapped to from/to params if backend supports; here we send date_range
+      if (filters.dateRange && filters.dateRange !== "all") params.date_range = filters.dateRange
+      if (filters.customer) params.customer = filters.customer
 
+      const response = await ordersAPI.getOrders(params)
       // 👇 Log the entire response for debugging
-      console.log("Fetched Orders:", response);
-
-      setOrders(response.results || response);
+      console.log("Fetched Orders:", response)
+      const fetched = response.results || response
+      setOrders(fetched)
     } catch (error) {
       console.error("Failed to load orders:", error);
       setOrders([]);
@@ -121,13 +150,19 @@ export default function OrdersPage() {
       accessorKey: "customer",
       header: "Customer",
       cell: ({ row }) => {
-        const customer = row.original.customer
+        const cust = row.original.customer
+        let name = "Unknown"
+        let email = ""
+        if (typeof cust === "number") {
+          name = customersMap[cust] || `#${cust}`
+        } else if (cust && typeof cust === "object") {
+          name = `${cust.first_name ?? ""} ${cust.last_name ?? ""}`.trim() || customersMap[cust.id] || cust.email || `#${cust.id}`
+          email = cust.email || ""
+        }
         return (
           <div>
-            <div className="font-medium">
-              {customer.first_name} {customer.last_name}
-            </div>
-            <div className="text-sm text-muted-foreground">{customer.email}</div>
+            <div className="font-medium">{name}</div>
+            {email && <div className="text-sm text-muted-foreground">{email}</div>}
           </div>
         )
       },
@@ -135,7 +170,17 @@ export default function OrdersPage() {
     {
       accessorKey: "status",
       header: "Status",
-      cell: ({ row }) => <OrderStatusBadge status={row.original.status} />,
+      cell: ({ row }) => <OrderStatusBadge status={row.original.status} label={row.original.status_display} />,
+    },
+    {
+      accessorKey: "subtotal",
+      header: "Subtotal",
+      cell: ({ row }) => <div>₹{Number(row.original.subtotal ?? 0).toLocaleString()}</div>,
+    },
+    {
+      accessorKey: "shipping_address",
+      header: "Shipping",
+      cell: ({ row }) => <div className="text-sm">{row.original.shipping_address?.title ?? "-"}</div>,
     },
     {
       accessorKey: "items_count",
@@ -152,12 +197,11 @@ export default function OrdersPage() {
       header: "Total",
       cell: ({ row }) => {
         const order = row.original
+        const ship = order.shipping_charge ?? "0"
         return (
           <div>
-            <div className="font-medium">₹{order.total.toLocaleString()}</div>
-            <div className="text-xs text-muted-foreground">
-              +₹{order.shipping_charge} shipping
-            </div>
+            <div className="font-medium">₹{Number(order.total ?? 0).toLocaleString()}</div>
+            <div className="text-xs text-muted-foreground">+₹{Number(ship).toLocaleString()} shipping</div>
           </div>
         )
       },
@@ -271,29 +315,70 @@ export default function OrdersPage() {
           <Card>
             <CardHeader>
               <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-                <div>
-                  <CardTitle>Orders</CardTitle>
-                  <CardDescription>
-                    Manage customer orders and track their status
-                  </CardDescription>
-                </div>
-                <div className="w-full sm:w-40">
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-full flex items-center">
-                      <Filter className="w-4 h-4 mr-2" />
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Orders</SelectItem>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="processing">Processing</SelectItem>
-                      <SelectItem value="shipped">Shipped</SelectItem>
-                      <SelectItem value="delivered">Delivered</SelectItem>
-                      <SelectItem value="cancelled">Cancelled</SelectItem>
-                      <SelectItem value="returned">Returned</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                
+                {/* Filters card (status, date range, customer) - similar to Inventory filters UI */}
+              <Card className="mb-4">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Filter className="w-5 h-5" />
+                    Filters
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+                    <div>
+                      <Label>Status</Label>
+                      <Select value={filters.status} onValueChange={(v) => setFilters({ ...filters, status: v })}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="All Orders" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Orders</SelectItem>
+                          <SelectItem value="pending">Pending</SelectItem>
+                          <SelectItem value="processing">Processing</SelectItem>
+                          <SelectItem value="shipped">Shipped</SelectItem>
+                          <SelectItem value="delivered">Delivered</SelectItem>
+                          <SelectItem value="cancelled">Cancelled</SelectItem>
+                          <SelectItem value="returned">Returned</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label>Date Range</Label>
+                      <Select value={filters.dateRange} onValueChange={(v) => setFilters({ ...filters, dateRange: v })}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="All time" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All time</SelectItem>
+                          <SelectItem value="7d">Last 7 days</SelectItem>
+                          <SelectItem value="30d">Last 30 days</SelectItem>
+                          <SelectItem value="this_month">This month</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label>Customer</Label>
+                      <Input
+                        placeholder="Customer email or id"
+                        value={filters.customer}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFilters({ ...filters, customer: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="flex items-end space-x-2">
+                      <Button variant="outline" onClick={() => setFilters({ status: "all", dateRange: "all", customer: "" })}>
+                        Clear Filters
+                      </Button>
+                      <Button onClick={() => loadOrders()}>
+                        Apply
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
               </div>
             </CardHeader>
             <CardContent>

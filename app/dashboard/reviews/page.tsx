@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { MoreHorizontal, Star, MessageSquare, CheckCircle, XCircle, Plus, Eye } from "lucide-react"
+import { MoreHorizontal, Star, MessageSquare, XCircle, Plus, Eye } from "lucide-react"
 import { reviewsAPI } from "@/lib/services/reviews"
 import { customersAPI } from "@/lib/services/customers"
 import { productsAPI } from "@/lib/services/Product"
@@ -36,21 +36,35 @@ const testimonialSchema = z.object({
 type TestimonialFormData = z.infer<typeof testimonialSchema>
 interface Review {
   id: number
-  customer: { name: string; email: string }
-  product: { name: string; sku: string }
+  // API may return customer as a string (username) or an object with name/email
+  customer: string | { name: string; email?: string }
+  // product may be an id or an object
+  product: number | { id?: number; name?: string; sku?: string }
   rating: number
-  comment: string
-  is_approved: boolean
-  created_at: string
+  // some APIs call the field `review` instead of `comment`
+  comment?: string
+  review?: string
+  title?: string
+  is_approved?: boolean
+  created_at?: string
+  updated_at?: string
 }
 interface Testimonial {
   id: number
-  customer_name: string
-  content: string
-  rating: number
+  // backend may return customer as id or object
+  customer?: number | { name?: string }
+  // testimonial title/name
+  name?: string
+  content?: string
+  image_url?: string | null
+  video_url?: string | null
+  is_approved?: boolean
+  organization?: string | null
+  created_at?: string
+  // optional additional fields
+  rating?: number
   product_name?: string
-  is_featured: boolean
-  created_at: string
+  is_featured?: boolean
 }
 export default function ReviewsPage() {
   const [reviews, setReviews] = useState<Review[]>([])
@@ -68,7 +82,8 @@ export default function ReviewsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [uploadError, setUploadError] = useState<string>("")
   const { toast } = useToast()
-  const form = useForm<TestimonialFormData>({
+  // useForm typed as any to avoid resolver signature mismatch between zod and react-hook-form types
+  const form = useForm<any>({
     resolver: zodResolver(testimonialSchema),
     defaultValues: {
       customer_id: "",
@@ -126,7 +141,26 @@ const onSubmit = async (data: TestimonialFormData) => {
         reviewsAPI.getTestimonials().catch(() => ({ results: [] })),
       ]);
       setReviews(reviewsData.results || []);
-      setTestimonials(testimonialsData.results || []);
+      // Merge server-provided testimonials with any locally-created ones we persisted
+      let results = testimonialsData.results || []
+      try {
+        const key = "local_testimonials"
+        const raw = typeof window !== "undefined" ? localStorage.getItem(key) : null
+        const cached: Testimonial[] = raw ? JSON.parse(raw) : []
+        if (cached.length > 0) {
+          // prepend any cached testimonials not already returned by the server
+          const presentIds = new Set(results.map((r: any) => r.id))
+          const missing = cached.filter((t) => !presentIds.has(t.id))
+          if (missing.length > 0) results = [...missing, ...results]
+
+          // remove cached items that are now present on the server
+          const remaining = cached.filter((t) => !results.some((r: any) => r.id === t.id && r.is_approved))
+          try { localStorage.setItem(key, JSON.stringify(remaining)) } catch (_) {}
+        }
+      } catch (e) {
+        // ignore localStorage or parse errors
+      }
+      setTestimonials(results);
       // Debug: log all reviews and testimonials
       console.log("Loaded reviews:", reviewsData);
       console.log("Loaded testimonials:", testimonialsData);
@@ -139,22 +173,7 @@ const onSubmit = async (data: TestimonialFormData) => {
     }
   }
 
-  const handleApproveReview = async (id: number) => {
-    try {
-      await reviewsAPI.approveReview(id)
-      toast({
-        title: "Success",
-        description: "Review approved successfully",
-      })
-      loadData()
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to approve review",
-        variant: "destructive",
-      })
-    }
-  }
+  
 
   const handleDeleteReview = async (id: number) => {
     if (!confirm("Are you sure you want to delete this review?")) return
@@ -172,6 +191,27 @@ const onSubmit = async (data: TestimonialFormData) => {
         description: "Failed to delete review",
         variant: "destructive",
       })
+    }
+  }
+
+
+
+  const handleDeleteTestimonial = async (id: number) => {
+    if (!confirm("Are you sure you want to delete this testimonial?")) return
+    try {
+      await reviewsAPI.deleteTestimonial(id)
+      toast({ title: "Success", description: "Testimonial deleted" })
+      // remove from local cache if present
+      try {
+        const key = "local_testimonials"
+        const raw = typeof window !== "undefined" ? localStorage.getItem(key) : null
+        const arr: Testimonial[] = raw ? JSON.parse(raw) : []
+        const filtered = arr.filter((t) => t.id !== id)
+        try { localStorage.setItem(key, JSON.stringify(filtered)) } catch (_) {}
+      } catch (e) {}
+      loadData()
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to delete testimonial", variant: "destructive" })
     }
   }
 
@@ -207,7 +247,22 @@ const onSubmit = async (data: TestimonialFormData) => {
         image_url: image_url || undefined,
         video_url: video_url || undefined,
       }
-      await reviewsAPI.createTestimonial(payload)
+      const resp = await reviewsAPI.createTestimonial(payload)
+      console.log("createTestimonial response:", resp)
+      // Optimistically add created testimonial to local state in case the GET/list endpoint
+      // doesn't immediately return the new item (some backends filter testimonials by featured/approved)
+      setTestimonials((prev) => [resp, ...prev])
+      try {
+        const key = "local_testimonials"
+        const raw = typeof window !== "undefined" ? localStorage.getItem(key) : null
+        const arr: Testimonial[] = raw ? JSON.parse(raw) : []
+        if (!arr.find((t) => t.id === resp.id)) {
+          arr.unshift(resp)
+          try { localStorage.setItem(key, JSON.stringify(arr)) } catch (_) {}
+        }
+      } catch (e) {
+        // ignore localStorage errors
+      }
       toast({
         title: "Success",
         description: "Testimonial created successfully",
@@ -218,11 +273,12 @@ const onSubmit = async (data: TestimonialFormData) => {
       setImagePreview("")
       setVideoPreview("")
       form.reset()
-      loadData()
-    } catch (error) {
+    } catch (error: any) {
+      console.error("createTestimonial error:", error)
+      const serverMessage = error?.response?.data || error?.message || "Failed to create testimonial"
       toast({
         title: "Error",
-        description: "Failed to create testimonial",
+        description: String(serverMessage),
         variant: "destructive",
       })
     } finally {
@@ -261,7 +317,21 @@ const onSubmit = async (data: TestimonialFormData) => {
         image_url: image_url || undefined,
         video_url: video_url || undefined,
       }
-      await reviewsAPI.updateTestimonial(editingTestimonial.id, payload)
+      const resp = await reviewsAPI.updateTestimonial(editingTestimonial.id, payload)
+      console.log("updateTestimonial response:", resp)
+      // Update local testimonials list with the updated item
+      setTestimonials((prev) => prev.map((t) => (t.id === resp.id ? resp : t)))
+      try {
+        if (resp.is_approved) {
+          const key = "local_testimonials"
+          const raw = typeof window !== "undefined" ? localStorage.getItem(key) : null
+          const arr: Testimonial[] = raw ? JSON.parse(raw) : []
+          const filtered = arr.filter((t) => t.id !== resp.id)
+          try { localStorage.setItem(key, JSON.stringify(filtered)) } catch (_) {}
+        }
+      } catch (e) {
+        // ignore localStorage errors
+      }
       toast({
         title: "Success",
         description: "Testimonial updated successfully",
@@ -273,11 +343,12 @@ const onSubmit = async (data: TestimonialFormData) => {
       setImagePreview("")
       setVideoPreview("")
       form.reset()
-      loadData()
-    } catch (error) {
+    } catch (error: any) {
+      console.error("updateTestimonial error:", error)
+      const serverMessage = error?.response?.data || error?.message || "Failed to update testimonial"
       toast({
         title: "Error",
-        description: "Failed to update testimonial",
+        description: String(serverMessage),
         variant: "destructive",
       })
     } finally {
@@ -291,12 +362,14 @@ const onSubmit = async (data: TestimonialFormData) => {
       header: "Customer",
       cell: ({ row }) => {
         const customer = row.original.customer
+        if (!customer) return <div>-</div>
+        if (typeof customer === "string") {
+          return <div className="font-medium">{customer}</div>
+        }
         return (
           <div>
-            <div className="font-medium">{customer.name}</div>
-            <div className="text-sm text-muted-foreground truncate max-w-[150px] sm:max-w-xs" title={customer.email}>
-              {customer.email}
-            </div>
+            <div className="font-medium">{customer.name || customer.email || "-"}</div>
+            {customer.email && <div className="text-sm text-muted-foreground">{customer.email}</div>}
           </div>
         )
       },
@@ -306,13 +379,23 @@ const onSubmit = async (data: TestimonialFormData) => {
       header: "Product",
       cell: ({ row }) => {
         const product = row.original.product
+        if (!product) return <div>-</div>
+        if (typeof product === "number") {
+          return <div>Product ID: {product}</div>
+        }
         return (
           <div>
-            <div className="font-medium">{product.name}</div>
-            <div className="text-sm text-muted-foreground">SKU: {product.sku}</div>
+            <div className="font-medium">{product.name || `ID: ${product?.id ?? "-"}`}</div>
+            <div className="text-sm text-muted-foreground">SKU: {product.sku || "-"}</div>
           </div>
         )
       },
+    },
+
+    {
+      accessorKey: "title",
+      header: "Title",
+      cell: ({ row }) => <div className="font-medium">{row.original.title || "-"}</div>,
     },
     {
       accessorKey: "rating",
@@ -335,126 +418,125 @@ const onSubmit = async (data: TestimonialFormData) => {
     {
       accessorKey: "comment",
       header: "Comment",
+      cell: ({ row }) => {
+        const text = row.original.review || row.original.comment || "-"
+        return (
+          <div className="max-w-xs truncate" title={String(text)}>
+            {text}
+          </div>
+        )
+      },
+    },
+
+    {
+      accessorKey: "created_at",
+      header: "Created",
       cell: ({ row }) => (
-        <div className="max-w-xs truncate" title={row.original.comment}>
-          {row.original.comment}
+        <div>
+          {row.original.created_at ? new Date(row.original.created_at).toLocaleString() : "-"}
         </div>
       ),
     },
+
     {
-      accessorKey: "is_approved",
-      header: "Status",
+      accessorKey: "updated_at",
+      header: "Updated",
       cell: ({ row }) => (
-        <Badge variant={row.original.is_approved ? "default" : "secondary"}>
-          {row.original.is_approved ? "Approved" : "Pending"}
-        </Badge>
+        <div>
+          {row.original.updated_at ? new Date(row.original.updated_at).toLocaleString() : "-"}
+        </div>
       ),
     },
+    
     {
       id: "actions",
-      cell: ({ row }) => {
-        const review = row.original
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <MoreHorizontal className="h-4 w-4" />
+        cell: ({ row }) => {
+          const review = row.original
+          return (
+            <div className="flex items-center gap-2">
+                          
+              <Button variant="ghost" size="icon" title="Delete" onClick={() => handleDeleteReview(review.id)}>
+                <XCircle className="h-4 w-4" />
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => { }}>
-                <Eye className="mr-2 h-4 w-4" />
-                View Full Review
-              </DropdownMenuItem>
-              {!review.is_approved && (
-                <DropdownMenuItem onClick={() => handleApproveReview(review.id)}>
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  Approve
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuItem onClick={() => handleDeleteReview(review.id)}>
-                <XCircle className="mr-2 h-4 w-4" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )
-      },
+            </div>
+          )
+        },
     },
   ]
   const testimonialColumns: ColumnDef<Testimonial>[] = [
     {
-      accessorKey: "customer_name",
-      header: "Customer",
-      cell: ({ row }) => <div>{row.original.customer_name}</div>,
+      accessorKey: "name",
+      header: "Name",
+      cell: ({ row }) => <div className="font-medium">{row.original.name || row.original.product_name || "-"}</div>,
     },
     {
       accessorKey: "content",
       header: "Content",
       cell: ({ row }) => (
         <div className="max-w-xs truncate" title={row.original.content}>
-          {row.original.content}
+          {row.original.content || "-"}
         </div>
       ),
     },
     {
-      accessorKey: "rating",
-      header: "Rating",
+      accessorKey: "customer",
+      header: "Customer",
       cell: ({ row }) => {
-        const rating = row.original.rating
-        return (
-          <div className="flex items-center">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Star
-                key={i}
-                className={`w-4 h-4 ${i < rating ? "text-yellow-400 fill-current" : "text-gray-300"}`}
-              />
-            ))}
-            <span className="ml-2 text-sm">{rating}/5</span>
-          </div>
-        )
+        const c = row.original.customer
+        if (!c) return <div>-</div>
+        // If backend returned an id, try to resolve the customer's display name from loaded customers
+        if (typeof c === "number") {
+          const cust = customers.find((x) => {
+            // some customer objects are nested under `user` with an id
+            const id = x?.user?.id ?? x?.id
+            return id === c
+          })
+          if (cust) return <div className="font-medium">{cust.user?.first_name || cust.user?.email || `ID: ${c}`}</div>
+          return <div>Customer ID: {c}</div>
+        }
+        return <div className="text-sm text-muted-foreground">{c.name || "-"}</div>
       },
     },
     {
-      accessorKey: "product_name",
-      header: "Product",
-      cell: ({ row }) => <div>{row.original.product_name || "-"}</div>,
+      accessorKey: "created_at",
+      header: "Created",
+      cell: ({ row }) => <div>{row.original.created_at ? new Date(row.original.created_at).toLocaleString() : "-"}</div>,
     },
     {
-      accessorKey: "is_featured",
-      header: "Featured",
-      cell: ({ row }) =>
-        row.original.is_featured ? (
-          <Badge variant="default">Featured</Badge>
-        ) : (
-          <Badge variant="secondary">No</Badge>
-        ),
+      header: "Status",
+      accessorKey: "is_approved",
+      cell: ({ row }) => (row.original.is_approved ? <Badge variant="outline">Approved</Badge> : <Badge variant="destructive">Pending</Badge>),
+    },
+    {
+      header: "Media",
+      cell: ({ row }) => (
+        <div className="flex items-center gap-2">
+          {row.original.image_url ? (
+            <a href={row.original.image_url} target="_blank" rel="noreferrer" title="View image">
+              <img src={row.original.image_url} alt="img" className="h-8 w-8 rounded object-cover" />
+            </a>
+          ) : null}
+          {row.original.video_url ? (
+            <a href={row.original.video_url} target="_blank" rel="noreferrer" title="View video">
+              <Eye className="h-5 w-5" />
+            </a>
+          ) : null}
+        </div>
+      ),
     },
     {
       id: "actions",
       cell: ({ row }) => {
         const testimonial = row.original
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={() => {
-                  setEditingTestimonial(testimonial)
-                  setShowTestimonialForm(true)
-                  form.reset(testimonial)
-                }}
-              >
-                <MessageSquare className="mr-2 h-4 w-4" />
-                Edit
-              </DropdownMenuItem>
-              {/* Add delete testimonial action if needed */}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" title="Edit" onClick={() => { setEditingTestimonial(testimonial); setShowTestimonialForm(true); form.reset(testimonial) }}>
+              <MessageSquare className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" title="Delete" onClick={() => handleDeleteTestimonial(testimonial.id)}>
+              <XCircle className="h-4 w-4" />
+            </Button>
+          </div>
         )
       },
     },
@@ -522,7 +604,7 @@ const onSubmit = async (data: TestimonialFormData) => {
               <DataTable
                 columns={testimonialColumns}
                 data={testimonials}
-                searchKey="customer_name"
+                searchKey="name"
                 searchPlaceholder="Search testimonials..."
               // loading={loading}
               />
@@ -652,8 +734,8 @@ const onSubmit = async (data: TestimonialFormData) => {
                 {/* Created At (read-only, only on edit) */}
                 {editingTestimonial && (
                   <div>
-                    <FormLabel>Created At</FormLabel>
-                    <Input value={new Date(editingTestimonial.created_at).toLocaleString()} readOnly disabled />
+            <FormLabel>Created At</FormLabel>
+              <Input value={editingTestimonial.created_at ? new Date(editingTestimonial.created_at).toLocaleString() : ""} readOnly disabled />
                   </div>
                 )}
                 {uploadError && <div className="text-red-500 text-sm mb-2">{uploadError}</div>}

@@ -1,3 +1,4 @@
+
 import api from "@/lib/api";
 
 // Reviews and Testimonials API
@@ -12,6 +13,8 @@ export const reviewsAPI = {
     return response.data
   },
 
+
+
   deleteReview: async (id: number) => {
     const response = await api.delete(`/reviews/${id}/`)
     return response.data
@@ -19,6 +22,11 @@ export const reviewsAPI = {
 
   getTestimonials: async (params?: Record<string, any>) => {
     const response = await api.get("/testimonials/", { params })
+    return response.data
+  },
+
+  getTestimonial: async (id: number) => {
+    const response = await api.get(`/testimonials/${id}/`)
     return response.data
   },
 

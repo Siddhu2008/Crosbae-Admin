@@ -69,37 +69,89 @@ export default function DashboardPage() {
   useEffect(() => {
     const loadDashboardData = async () => {
       try {
-        const [metricsData, salesChartData, topProductsData, recentActivityData, customers, products, orders, payments] =
+        const [metricsData, salesChartData, recentActivityData, customersRes, productsRes, ordersRes, paymentsRes] =
           await Promise.all([
             dashboardAPI.getMetrics(),
             dashboardAPI.getSalesChart("30d"),
-            dashboardAPI.getTopProducts(),
-            dashboardAPI.getRecentActivity ? dashboardAPI.getRecentActivity() : Promise.resolve([]),
+            // dashboardAPI may not expose getRecentActivity on all builds; guard via any
+            typeof (dashboardAPI as any).getRecentActivity === "function"
+              ? (dashboardAPI as any).getRecentActivity()
+              : Promise.resolve([]),
             customersAPI.getCustomers(), // fetch all customers
-             productsAPI.getProducts(),
-          ordersAPI.getOrders(),
-          paymentsAPI.getPayments(),
+            productsAPI.getProducts(),
+            ordersAPI.getOrders(),
+            paymentsAPI.getPayments(),
           ]);
 
-           // Calculate total revenue from payments
-        const totalRevenue = payments.reduce(
-          (sum: number, payment: any) => sum + payment.amount,
-          0
-        )
+        const customers = customersRes.results || customersRes || []
+        const products = productsRes.results || productsRes || []
+        const orders = ordersRes.results || ordersRes || []
+        const payments = paymentsRes.results || paymentsRes || []
+
+        // Calculate total revenue: try several common fields across different APIs
+        let totalRevenue = 0
+        if (orders.length > 0) {
+          totalRevenue = orders.reduce((sum: number, o: any) => {
+            const v = Number(o.total ?? o.total_amount ?? o.grand_total ?? o.amount ?? 0) || 0
+            return sum + v
+          }, 0)
+        }
+
+        // If orders didn't yield any revenue, fall back to payments (try multiple field names)
+        if (!totalRevenue && payments.length > 0) {
+          totalRevenue = payments.reduce((sum: number, p: any) => {
+            const v = Number(p.amount ?? p.total ?? p.value ?? 0) || 0
+            return sum + v
+          }, 0)
+        }
+
+        // Compute top products by aggregating across orders' items (match other pages)
+        const productMap: Record<number, { id: number; sales: number; revenue: number }> = {}
+        for (const order of orders) {
+          const items = order.items || order.order_items || order.items_detail || order.line_items || order.items_list || []
+          if (!Array.isArray(items)) continue
+          for (const it of items) {
+            // determine product id (coerce to number when possible)
+            let pidRaw: any = null
+            if (it.product && typeof it.product === "object") pidRaw = it.product.id ?? it.product
+            else pidRaw = it.product_id ?? it.product ?? it.productId ?? it.sku ?? null
+            const pid = Number(pidRaw)
+            const pidKey = !Number.isNaN(pid) ? pid : null
+            if (pidKey === null) continue
+
+            const qty = Number(it.quantity ?? it.qty ?? it.count ?? it.qty_ordered ?? 1) || 1
+            const price = Number(it.total ?? it.price ?? it.unit_price ?? it.amount ?? it.subtotal ?? 0) || 0
+
+            if (!productMap[pidKey]) productMap[pidKey] = { id: pidKey, sales: 0, revenue: 0 }
+            productMap[pidKey].sales += qty
+            productMap[pidKey].revenue += qty * price
+          }
+        }
+
+        const computedTopProducts: TopProduct[] = Object.values(productMap)
+          .map((p) => {
+            // try to find a matching product by id or sku/title fallbacks
+            const prod = (products as any[]).find((x: any) => x?.id === p.id || String(x?.id) === String(p.id) || x?.sku === String(p.id) || x?.name === String(p.id)) || { name: `Product ${p.id}` }
+            const displayName = prod.name || prod.title || prod.product_name || prod.sku || `Product ${p.id}`
+            return { id: p.id, name: displayName, sales: p.sales, revenue: p.revenue }
+          })
+          .sort((a, b) => b.sales - a.sales)
+
         setMetrics({
           ...metricsData,
-           totalRevenue,
+          totalRevenue,
           totalOrders: orders.length,
           activeCustomers: customers.length,
           totalProducts: products.length,
-          revenueChange: "0%", // You can calculate this if you have previous data
+          revenueChange: "0%",
           ordersChange: "0%",
           customersChange: "0%",
           productsChange: "0%",
-        });
-        setSalesData(salesChartData);
-        setTopProducts(topProductsData);
-        setRecentActivity(recentActivityData);
+        })
+
+        setSalesData(salesChartData)
+        setTopProducts(computedTopProducts.slice(0, 10))
+        setRecentActivity(recentActivityData)
       } catch (error) {
         console.error("Failed to load dashboard data:", error);
       } finally {
@@ -134,30 +186,30 @@ export default function DashboardPage() {
         <main className="flex-1 p-4 sm:p-6 space-y-6">
           {/* Metrics Cards: stacked on mobile, grid on larger screens */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
-             <MetricCard
+            <MetricCard
               title="Total Revenue"
-              value={`$${metrics?.totalRevenue.toLocaleString()}`}
+              value={`$${Number(metrics?.totalRevenue ?? 0).toLocaleString()}`}
               change={metrics?.revenueChange}
               changeType="positive"
               icon={DollarSign}
             />
             <MetricCard
               title="Total Orders"
-              value={metrics?.totalOrders.toLocaleString() || "0"}
+              value={Number(metrics?.totalOrders ?? 0).toLocaleString()}
               change={metrics?.ordersChange}
               changeType="positive"
               icon={ShoppingCart}
             />
             <MetricCard
               title="Active Customers"
-              value={metrics?.activeCustomers.toLocaleString() || "0"}
+              value={Number(metrics?.activeCustomers ?? 0).toLocaleString()}
               change={metrics?.customersChange}
               changeType="positive"
               icon={Users}
             />
             <MetricCard
               title="Total Products"
-              value={metrics?.totalProducts.toLocaleString() || "0"}
+              value={Number(metrics?.totalProducts ?? 0).toLocaleString()}
               change={metrics?.productsChange}
               changeType="neutral"
               icon={Package}
@@ -234,7 +286,7 @@ export default function DashboardPage() {
                       </div>
                       <div className="mt-2 sm:mt-0 text-right flex items-center space-x-2 sm:space-x-4 justify-end">
                         <p className="font-medium text-sm">
-                          ${product.revenue.toLocaleString()}
+                          ${Number(product.revenue ?? 0).toLocaleString()}
                         </p>
                         <Badge
                           variant="secondary"
